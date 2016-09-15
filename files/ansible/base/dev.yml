@@ -1,0 +1,34 @@
+#!/usr/bin/env ansible-playbook
+# NOTE: This playbook installs all the application dependenices for development
+# on the 'dev' machine so it is a stand-alone product
+---
+- hosts: dev
+  become: yes
+
+  roles:
+    - developer-tools
+    - postgres
+    - redis
+
+
+- hosts: dev
+
+  pre_tasks:
+    # TODO: Use file fallback so can read the project dir, then user's home dir
+    - include_vars: '~/.ansible-developer.yml'
+
+  roles:
+    - yadr
+    - developer
+
+  tasks:
+    - debug: var=database_password
+      tags: [ding]
+    - debug: var=database_username
+      tags: [ding]
+    - debug: var=database_host
+      tags: [ding]
+    - debug: var=ansible_env.USER
+      tags: [ding]
+    - debug: var=app
+      tags: [ding]
