@@ -13,7 +13,7 @@ TODO: Add description of what this gem does
 5. In the Vagrantfile, uncomment and change the value of testing dir to the directory where the repos were cloned
 
 ```bash
-cd ~/projects
+cd ~/projects/rjayroach
 git clone git@github.com:rjayroach/ansible-roles.git
 git clone git@github.com:rjayroach/prepd.git
 echo 'This is a test!' > prepd/.vault-password.txt
@@ -28,7 +28,7 @@ echo 'This is a test!' > prepd/.vault-password.txt
 3. run vagrant up
 
 ```bash
-cd ~/projects
+cd ~/projects/rjayroach
 mkdir prepd-tests/one && cd prepd-tests/one
 ln -s ~/projects/prepd/Vagrantfile
 ln -s ~/projects/prepd/bootstrap.sh
@@ -41,6 +41,12 @@ vagrant up
 2. cd {project_name}/ansible/base
 3. run the role configuration, e.g ./dev.yml
 
+
+### Test Project Cleanup
+
+1. vagrant halt master
+2. vagrant destroy master
+2. rm -rf {test_project_name}
 
 ## Installation
 
