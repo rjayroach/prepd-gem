@@ -1,8 +1,46 @@
 # Prepd
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/prepd`. To experiment with that code, run `bin/console` for an interactive prompt.
+TODO: Add description of what this gem does
 
-TODO: Delete this and the text above, and describe your gem
+## Testing
+
+### Global Setup
+
+1. Clone ansible-roles
+2. Clone this repository and cd into it
+3. run echo 'This is a test!' > .vault-password.txt
+4. In the Vagrantfile, uncomment test_mode = true
+5. In the Vagrantfile, uncomment and change the value of testing dir to the directory where the repos were cloned
+
+```bash
+cd ~/projects
+git clone git@github.com:rjayroach/ansible-roles.git
+git clone git@github.com:rjayroach/prepd.git
+echo 'This is a test!' > prepd/.vault-password.txt
+# Edit Vagrantfile
+```
+
+
+### New Test Project Setup
+
+1. Create a test project directory and cd into it
+2. Softlink to this repository's Vagrantfile and bootstrap.sh file
+3. run vagrant up
+
+```bash
+cd ~/projects
+mkdir prepd-tests/one && cd prepd-tests/one
+ln -s ~/projects/prepd/Vagrantfile
+ln -s ~/projects/prepd/bootstrap.sh
+vagrant up
+```
+
+### Test Project Configuration Management
+
+1. vagrant ssh master or ssh -A 10.100.199.200
+2. cd {project_name}/ansible/base
+3. run the role configuration, e.g ./dev.yml
+
 
 ## Installation
 
