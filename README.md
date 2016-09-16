@@ -8,7 +8,7 @@ TODO: Add description of what this gem does
 
 1. Clone ansible-roles
 2. Clone this repository and cd into it
-3. run echo 'This is a test!' > .vault-password.txt
+3. Create a .vault-password.txt for testing
 4. In the Vagrantfile, uncomment test_mode = true
 5. In the Vagrantfile, uncomment and change the value of testing dir to the directory where the repos were cloned
 
@@ -16,7 +16,7 @@ TODO: Add description of what this gem does
 cd ~/projects/rjayroach
 git clone git@github.com:rjayroach/ansible-roles.git
 git clone git@github.com:rjayroach/prepd.git
-echo 'This is a test!' > prepd/.vault-password.txt
+echo 'This is only for testing!' > prepd/files/.vault-password.txt
 # Edit Vagrantfile
 ```
 
