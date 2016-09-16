@@ -32,6 +32,7 @@ cd ~/projects/rjayroach
 mkdir prepd-tests/one && cd prepd-tests/one
 ln -s ~/projects/prepd/Vagrantfile
 ln -s ~/projects/prepd/bootstrap.sh
+# Create a developer.yml file
 vagrant up
 ```
 
