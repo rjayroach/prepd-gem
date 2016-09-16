@@ -14,8 +14,11 @@
 - hosts: dev
 
   pre_tasks:
-    # TODO: Use file fallback so can read the project dir, then user's home dir
-    - include_vars: '~/.ansible-developer.yml'
+    - include_vars: '{{ item }}'
+      with_first_found:
+         - '../../.ansible-developer.yml'
+         - '~/.ansible-developer.yml'
+
 
   roles:
     - yadr
