@@ -44,8 +44,7 @@ vagrant up
 
 ### Test Project Cleanup
 
-1. vagrant halt master
-2. vagrant destroy master
+1. vagrant destroy master
 2. rm -rf {test_project_name}
 
 ## Installation

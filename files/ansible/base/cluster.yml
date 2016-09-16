@@ -1,111 +1,50 @@
 #!/usr/bin/env ansible-playbook
----
 # NOTE: This playbook installs and configures a docker swarm cluster on Vagrant hosts
-# TODO: Figure out what about having a project neutral inventory vs project specific
-# b/c right now the defined infra is project neutral but config requires project vars
+# TODO: Remove machine_env from project group_vars
 # TODO: If abstract the IP addresses from here then can run in other environments
-# Master is the cluster master
+---
 - hosts: master
+
+  pre_tasks:
+    - include_vars: '{{ item }}'
+      with_first_found:
+         - '../../.ansible-developer.yml'
+         - '~/.ansible-developer.yml'
+
+  roles:
+    - { role: docker, login: yes }
 
   tasks:
     - name: insert ssh aliases for each node
       blockinfile:
+        create: yes
         dest: ~/.zsh.after/aliases.zsh
+        marker: '# {mark} ANSIBLE MANAGED BLOCK (cluster.yml)'
         block: |
           alias n1='ssh node1.local'
           alias n2='ssh node2.local'
           alias n3='ssh node3.local'
 
 
-# Nodes are the worker nodes
+# Update configration only on the worker nodes
 - hosts: nodes
-  remote_user: vagrant
-
-  tasks:
-    - name: set shell edit mode to vi
-      copy:
-        src: roles/common/files/inputrc
-        dest: '{{ ansible_env.HOME }}/.inputrc'
-
-
-# Cluster is the entire set of machines: master + nodes
-- hosts: cluster
-  become: yes
 
   roles:
+    - common
     - docker
+
+
+# Update configuration on every node (worker nodes, inculding master; aka cluster)
+- hosts: cluster
+  become: yes
 
   tasks:
     - name: Add mappings to /etc/hosts
       blockinfile:
         dest: /etc/hosts
+        marker: '# {mark} ANSIBLE MANAGED BLOCK (cluster.yml)'
         block: |
-          {{item.ip}} {{item.name}}
-        marker: "# {mark} ANSIBLE MANAGED BLOCK {{item.name}}"
-      with_items:
-          - { name: node0.local, ip: 10.100.199.200 }
-          - { name: node1.local, ip: 10.100.199.201 }
-          - { name: node2.local, ip: 10.100.199.202 }
-          - { name: node3.local, ip: 10.100.199.203 }
-
-
-- hosts: master
-  tasks:
-    - name: Run Consul container
-      docker_service:
-        project_name: discovery
-        definition:
-          version: '2'
-          services:
-            consul:
-              image: progrium/consul:latest # https://hub.docker.com/r/progrium/consul/
-              command: '--bind=10.100.199.200 -server -bootstrap -ui-dir /ui'
-              network_mode: 'host'
-              # hostname: consul1
-              ports:
-                - '8400:8400'
-                - '8500:8500'
-                - '8600:53'
-
-
-- hosts: [master, node1]
-  tasks:
-    - name: Run Swarm container as manager
-      docker_service:
-        project_name: manager
-        definition:
-          version: '2'
-          services:
-            swarm:
-              # docker run -d -p 4000:4000 swarm manage -H :4000 --replication --advertise <manager0_ip>:4000 consul://<consul_ip>:8500
-              image: swarm:latest
-              command: 'manage -H :4000 --replication --advertise {{ ansible_eth1.ipv4.address }}:4000 consul://{{ ansible_eth1.ipv4.address }}:8500'
-              ports:
-                - '4000:4000'
-
-
-- hosts: [node2, node3]
-  tasks:
-    - name: Run Swarm container as node
-      docker_service:
-        project_name: node
-        definition:
-          version: '2'
-          services:
-            swarm:
-              image: swarm:latest
-              command: 'join --advertise={{ ansible_eth1.ipv4.address }}:2375 consul://10.100.199.200:8500'
-
-    - name: Run Registrator container
-      docker_service:
-        project_name: infra
-        definition:
-          version: '2'
-          services:
-            registrator:  # https://hub.docker.com/r/gliderlabs/registrator/
-              image: gliderlabs/registrator:latest
-              command: '-ip {{ ansible_eth1.ipv4.address }} consul://10.100.199.200:8500'
-              network_mode: host
-              hostname: registrator
-              volumes:
-                - '/var/run/docker.sock:/tmp/docker.sock'
+          10.100.199.200 node0.local
+          10.100.199.201 node1.local
+          10.100.199.202 node2.local
+          10.100.199.203 node3.local
