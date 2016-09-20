@@ -48,8 +48,8 @@ module Prepd
     end
   end
   Dotenv.load(config)
-  STDOUT.puts ENV['DATA_DIR']
-  STDOUT.puts ENV['VAGRANT_BASE_BOX']
+  # STDOUT.puts ENV['DATA_DIR']
+  # STDOUT.puts ENV['VAGRANT_BASE_BOX']
 end
 
 require 'prepd/schema'

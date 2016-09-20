@@ -53,12 +53,19 @@ module Prepd
     validates :name, presence: true, uniqueness: { scope: :client }
     after_create :setup
 
-    def path
-     "#{client.path}/#{name}"
+    #
+    # Copy files from the prepd/files directory
+    #
+    def setup
+      FileUtils.cp_r(files_path, path)
     end
 
-    def setup
-      FileUtils.mkdir_p(path)
+    def files_path
+      "#{__dir__}/../../files"
+    end
+
+    def path
+     "#{client.path}/#{name}"
     end
   end
 
@@ -69,17 +76,12 @@ module Prepd
     validates :name, presence: true, uniqueness: { scope: :project }
     after_create :setup
 
-    def path
-     "#{project.path}/#{name}"
+    def setup
+      FileUtils.mkdir_p(path)
     end
 
-    def setup
-      files_dir = "#{__dir__}/../../files"
-      STDOUT.puts path
-      STDOUT.puts files_dir
-      FileUtils.cp_r(files_dir, path)
-      # STDOUT.puts File.expand_path(File.dirname(__FILE__))
-      # TODO: Copy files from the prepd/files directory
+    def path
+     "#{project.path}/ansible/#{name}"
     end
   end
 end
