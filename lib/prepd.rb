@@ -5,9 +5,14 @@ require 'sqlite3'
 
 module Prepd
   def self.work_dir; "#{Dir.home}/.prepd"; end
+  def self.data_dir; ENV['DATA_DIR']; end
 
   def self.files; Dir.glob("#{work_dir}/*"); end
-  def self.rm; FileUtils.rm_rf(work_dir); end
+
+  def self.rm
+    FileUtils.rm_rf(work_dir)
+    FileUtils.rm_rf(data_dir)
+  end
 
   def self.config; "#{work_dir}/config"; end
   def self.clients; Client.pluck(:name); end

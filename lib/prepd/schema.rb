@@ -8,16 +8,25 @@ ActiveRecord::Schema.define do
 
   unless ActiveRecord::Base.connection.data_sources.include?('projects')
     create_table :projects do |table|
-      table.column :client_id, :integer # foreign key <table-name-singular>_id (i.e. this is the primary key from the 'albums' table)
+      table.column :client_id, :integer # foreign key <table-name-singular>_id
+      table.column :name, :string
+    end
+  end
+
+  unless ActiveRecord::Base.connection.data_sources.include?('applications')
+    create_table :applications do |table|
+      table.column :project_id, :integer # foreign key <table-name-singular>_id
       table.column :name, :string
     end
   end
 end
 
 module Prepd
+  # Client has_many projects; Project has_many applications
   class Client < ActiveRecord::Base
     attr_accessor :data_dir
     has_many :projects
+    has_many :applications, through: :projects
     before_validation :set_defaults
     validates :name, :path, presence: true
     after_create :setup
@@ -38,13 +47,39 @@ module Prepd
     end
   end
 
-  class Project< ActiveRecord::Base
+  class Project < ActiveRecord::Base
     belongs_to :client, required: true
-    validates :name, presence: true
+    has_many :applications
+    validates :name, presence: true, uniqueness: { scope: :client }
     after_create :setup
 
+    def path
+     "#{client.path}/#{name}"
+    end
+
     def setup
-      FileUtils.mkdir_p("#{client.path}/#{name}")
+      FileUtils.mkdir_p(path)
+    end
+  end
+
+
+
+  class Application < ActiveRecord::Base
+    belongs_to :project, required: true
+    validates :name, presence: true, uniqueness: { scope: :project }
+    after_create :setup
+
+    def path
+     "#{project.path}/#{name}"
+    end
+
+    def setup
+      files_dir = "#{__dir__}/../../files"
+      STDOUT.puts path
+      STDOUT.puts files_dir
+      FileUtils.cp_r(files_dir, path)
+      # STDOUT.puts File.expand_path(File.dirname(__FILE__))
+      # TODO: Copy files from the prepd/files directory
     end
   end
 end
