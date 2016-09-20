@@ -46,7 +46,7 @@ module Prepd
     end
 
     def files_path
-      "#{__dir__}/../../files"
+      "#{__dir__.split('/').reverse.drop(2).reverse.join('/')}/files"
     end
 
     def path
