@@ -3,16 +3,6 @@
 # on the 'dev' machine so it is a stand-alone product
 ---
 - hosts: dev
-  become: yes
-
-  roles:
-    - common
-    - postgres
-    - redis
-    # - rabbitmq
-
-
-- hosts: dev
 
   pre_tasks:
     - include_vars: '{{ item }}'
@@ -21,18 +11,24 @@
          - '~/.ansible-developer.yml'
 
   roles:
+    - common
     - yadr
     - developer
     - developer-tools
+    - postgres
+    - redis
 
+
+- hosts: dev:&env_local
+
+  roles:
+    - terraform
+    # NOTE: Example of how to test a new role:
+    # invoke this playbook using: ./dev.yml --tags test
+    # - { role: terraform, tags: 'test' }
+  # TODO: If ec2.py is in the inventory then it will be called by node config as well
   tasks:
-    - debug: var=database_password
-      tags: [ding]
-    - debug: var=database_username
-      tags: [ding]
-    - debug: var=database_host
-      tags: [ding]
-    - debug: var=ansible_env.USER
-      tags: [ding]
-    - debug: var=app
-      tags: [ding]
+    - name: install boto
+      pip: 
+        name: boto
+        state: present
