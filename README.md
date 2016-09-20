@@ -11,12 +11,15 @@ Thankfully, many web application products get to market on similar,
 if not identical, infrastructure. However setting up this infastructure takes time,
 is error prone and typically is non-repeatable ending up as a unique snowflake.
 
-Therefore, many development teams use a PaaS such as Heroku. This has limitations
-and only addresses the final deployment infrastructure
+To avoid this, many development teams turn to a PaaS service such as Heroku.
+This has limitations and only addresses the final deployment infrastructure.
 
 Prepd aims to address this by providing a 'convention over configruation' approach
 to provisioning infrastructure. From local developer machines (vagrant running linux
 on the developer's laptop) to staging and production running a docker swarm cluster.
+
+With microservice becoming a strategy for a significant number of projects, prepd
+aims to make it dead simple to build and deploy a microservice base application.
 
 Beginning with the end in mind, Prepd offers a simple, conventional way to provision
 all this infrastructure, including CI workflow, secrets managment, 12-factor apps
@@ -60,7 +63,7 @@ It takes a lot of services tuned to work together to make smoothly running infra
 - Additional required 3rd party services (if already known) are configured, setup and tested
 - Prepd wiki template provides a checklist that itemizes these tasks
 
-Swarm Load Balancing
+### Swarm Load Balancing
 - network overlays
 - load balancing between micro services
 - manage cluster scaling with compose/swarm mode/ansible or some combination thereof
