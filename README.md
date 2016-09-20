@@ -1,52 +1,80 @@
 # Prepd
 
-TODO: Add description of what this gem does
+Prepd - A Production Ready Environment for Project Development
 
-## Testing
+One of the core principles of Agile Development is delivering viewable results
+to the business from Week 1. Too often product developement begins with the
+application software, while the infrastructure to deploy into is addressed as
+and when it is needed.
 
-### Global Setup
+Thankfully, many web application products get to market on similar,
+if not identical, infrastructure. However setting up this infastructure takes time,
+is error prone and typically is non-repeatable ending up as a unique snowflake.
 
-1. Clone ansible-roles
-2. Clone this repository and cd into it
-3. Create a .vault-password.txt for testing
-4. In the Vagrantfile, uncomment test_mode = true
-5. In the Vagrantfile, uncomment and change the value of testing dir to the directory where the repos were cloned
+Therefore, many development teams use a PaaS such as Heroku. This has limitations
+and only addresses the final deployment infrastructure
 
-```bash
-cd ~/projects/rjayroach
-git clone git@github.com:rjayroach/ansible-roles.git
-git clone git@github.com:rjayroach/prepd.git
-echo 'This is only for testing!' > prepd/files/.vault-password.txt
-# Edit Vagrantfile
-```
+Prepd aims to address this by providing a 'convention over configruation' approach
+to provisioning infrastructure. From local developer machines (vagrant running linux
+on the developer's laptop) to staging and production running a docker swarm cluster.
+
+Beginning with the end in mind, Prepd offers a simple, conventional way to provision
+all this infrastructure, including CI workflow, secrets managment, 12-factor apps
+
+Agile Development requires 'near production' infrastructure to be in place from Day 1.
+Using Prepd, makes that possible quickly and easily without resorting to a PaaS provider.
+
+## Opinions
+
+By operating with a strong opinion, Prepd focuses on supporting best of breed products
+and best practices with relatively less effort. Configurable and pluggable architecture
+is a secondary goal to getting something up and running. Therefore, choices are made:
+
+- Infrastructure is Vagrant on local machines and AWS in the cloud
+- Ansible is the automation tool used to configure the infrastructure
+- Current product support: nginx, postgres, redis
+- Current project support: rails, emberjs
+
+## What is a Production Ready Environment?
+
+It takes a lot of services tuned to work together to make smoothly running infrastructure
+
+### Networking
+- Domain names figured out and DNS running on Route53 etc
+- Ability to programatically change and update DNS
+- SSL certs are already installed so we do TLS from the beginning; even on local development
+- Load Balancing is already be setup
+- HAProxy setup
+
+### Development Services
+- CI is setup and an automated deploy process is used from the outset of the project
+- how are containers getting built? by quay.io, circleCI, jenkins?
+- If CircleCI is building the containers and testing them then on success, where are containers going?
+- If using master, develop, feature branch setup then when does the container get built?
+- Prepd should anticipate that many types of CIs could be plugged in here
+
+### Application Services
+- Communication Services, e.g. SMTP, SNS (Push), Slack webhooks, Twilio, etc
+- Logging in both local/development and in staging/production with ELK
+- Monitoring/alert service
+- Additional required 3rd party services (if already known) are configured, setup and tested
+- Prepd wiki template provides a checklist that itemizes these tasks
+
+Swarm Load Balancing
+- network overlays
+- load balancing between micro services
+- manage cluster scaling with compose/swarm mode/ansible or some combination thereof
+
+## Projects
 
 
-### New Test Project Setup
-
-1. Create a test project directory and cd into it
-2. Softlink to this repository's Vagrantfile and bootstrap.sh file
-3. run vagrant up
-
-```bash
-cd ~/projects/rjayroach
-mkdir prepd-tests/one && cd prepd-tests/one
-ln -s ~/projects/prepd/Vagrantfile
-ln -s ~/projects/prepd/bootstrap.sh
-# Create a developer.yml file
-vagrant up
-```
-
-### Test Project Configuration Management
-
-1. vagrant ssh master or ssh -A 10.100.199.200
-2. cd {project_name}/ansible/base
-3. run the role configuration, e.g ./dev.yml
+### Applications
 
 
-### Test Project Cleanup
+## Environments
 
-1. vagrant destroy master
-2. rm -rf {test_project_name}
+Start with both local and development (development is cloud based instance running app software)
+
 
 ## Installation
 
@@ -66,7 +94,12 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+### Connect to local machine
+
+1. vagrant ssh master or ssh -A 10.100.199.200
+2. cd {project_name}/ansible/project
+3. run the role configuration, e.g ./dev.yml
+
 
 ## Development
 
