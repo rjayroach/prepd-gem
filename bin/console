@@ -1,10 +1,4 @@
 #!/usr/bin/env ruby
 
 require 'bundler/setup'
-require 'prepd'
-require 'pry'
-
-Pry.start(Prepd, prompt: [proc { 'prepd> '}])
-# Pry.start(Prepd, prompt: [proc { "prepd(#{Prepd.current_client.try(:name) || ''}) > " }])
-
-# Pry.start(Prepd::Class.new, prompt: [proc { "prepd(#{Prepd.current_client.try(:name) || ''}) > " }])
+require 'prepd/cli'

@@ -53,3 +53,4 @@ module Prepd
 end
 
 require 'prepd/schema'
+require 'prepd/models'
