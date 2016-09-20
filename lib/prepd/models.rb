@@ -60,6 +60,10 @@ module Prepd
 
     # NOTE: The remote project repository will *not* be destroyed
     def destroy_project
+      Dir.chdir(path) do
+        system('vagrant destroy')
+      end
+      # TODO: If user chooses not to destroy, then don't rm_rf
       FileUtils.rm_rf(path)
     end
 
