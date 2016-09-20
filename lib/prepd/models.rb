@@ -1,7 +1,7 @@
 module Prepd
   class Client < ActiveRecord::Base
     attr_accessor :data_dir
-    has_many :projects
+    has_many :projects, dependent: :destroy
     has_many :applications, through: :projects
 
     before_validation :set_defaults
@@ -22,31 +22,32 @@ module Prepd
   class Project < ActiveRecord::Base
     attr_accessor :mode
     belongs_to :client, required: true
-    has_many :applications
+    has_many :applications, dependent: :destroy
 
     validates :name, presence: true, uniqueness: { scope: :client }
 
-    after_create :setup, unless: "mode.eql?('test')"
-    after_create :setup_test, if: "mode.eql?('test')"
+    after_create :create_project
+    after_destroy :destroy_project
 
     #
-    # Copy files from the prepd/files directory
+    # Checkout the prepd-project files and remove the origin
     #
-    def setup
-      FileUtils.cp_r(files_path, path)
-    end
-
-    def setup_test
-      FileUtils.mkdir_p(path)
+    def create_project
+      Dir.chdir(client.path) { system("git clone git@github.com:rjayroach/prepd-project.git #{name}") }
       Dir.chdir(path) do
-        %w(Vagrantfile bootstrap.sh).each do |link|
-          FileUtils.ln_s("#{files_path}/#{link}", link)
-        end
+        # TODO: Put a field in table for git repo url then add a "git remote add origin #{url}"
+        system('git remote rm origin') unless mode.eql?('test')
+        require 'securerandom'
+        File.open('.vault-password.txt', 'w') { |f| f.puts(SecureRandom.uuid) }
+      end
+      Dir.chdir("#{path}/ansible") do
+        system('git submodule add git@github.com:rjayroach/ansible-roles.git roles')
       end
     end
 
-    def files_path
-      "#{__dir__.split('/').reverse.drop(2).reverse.join('/')}/files"
+    # NOTE: The remote project repository will *not* be destroyed
+    def destroy_project
+      FileUtils.rm_rf(path)
     end
 
     def path
@@ -63,7 +64,9 @@ module Prepd
     after_create :setup
 
     def setup
-      FileUtils.mkdir_p(path)
+      Dir.chdir("#{project.path}/ansible") do
+        FileUtils.cp_r('application', name)
+      end
     end
 
     def path
