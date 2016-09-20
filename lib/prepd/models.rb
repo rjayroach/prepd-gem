@@ -35,8 +35,21 @@ module Prepd
     def create_project
       Dir.chdir(client.path) { system("git clone git@github.com:rjayroach/prepd-project.git #{name}") }
       Dir.chdir(path) do
-        # TODO: Put a field in table for git repo url then add a "git remote add origin #{url}"
-        system('git remote rm origin') unless mode.eql?('test')
+        system('git remote rm origin') unless mode.eql?('dev')
+        system("git remote add origin #{repo_url}") unless (mode.eql?('dev') || repo_url.nil?)
+        if File.exists?("#{Prepd.work_dir}/developer.yml")
+          FileUtils.cp("#{Prepd.work_dir}/developer.yml", 'developer.yml')
+        elsif File.exists?("#{Dir.home}/.prepd-developer.yml")
+          FileUtils.cp("#{Dir.home}/.prepd-developer.yml", 'developer.yml')
+        else
+          File.open('developer.yml', 'w') do |f|
+            f.puts('---')
+            f.puts("git_username: #{system('git config --get user.name')}")
+            f.puts("git_email: #{system('git config --get user.email')}")
+            f.puts('docker_creds: []')
+            f.puts("#  - { registry: hub.docker.com, email: user@domain, username: username, password: password }")
+          end
+        end
         require 'securerandom'
         File.open('.vault-password.txt', 'w') { |f| f.puts(SecureRandom.uuid) }
       end

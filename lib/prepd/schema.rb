@@ -10,6 +10,7 @@ ActiveRecord::Schema.define do
     create_table :projects do |table|
       table.column :client_id, :integer # foreign key <table-name-singular>_id
       table.column :name, :string
+      table.column :repo_url, :string
     end
   end
 

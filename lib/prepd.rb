@@ -9,31 +9,11 @@ module Prepd
 
   def self.files; Dir.glob("#{work_dir}/*"); end
 
-  def self.rm
-    FileUtils.rm_rf(work_dir)
-    FileUtils.rm_rf(data_dir)
-  end
-
   def self.config; "#{work_dir}/config"; end
-  def self.clients; Client.pluck(:name); end
-  def self.projects; Project.pluck(:name); end
-
-  def self.current_client
-    @client
-  end
-
-  def self.current_client=(client)
-    STDOUT.puts 'duh'
-    @client = client
-    Dir.chdir(client.path) do
-      Pry.start(client, prompt: [proc { "prepd(#{client.name}) > " }])
-    end
-    STDOUT.puts 'duh2'
-    nil
-  end
 
   def self.default_settings
     {
+      'VERSION' => '1',
       'DATA_DIR' => "#{Dir.home}/prepd",
       'VAGRANT_BASE_BOX' => 'debian/contrib-jessie64'
     }
@@ -48,8 +28,6 @@ module Prepd
     end
   end
   Dotenv.load(config)
-  # STDOUT.puts ENV['DATA_DIR']
-  # STDOUT.puts ENV['VAGRANT_BASE_BOX']
 end
 
 require 'prepd/schema'
