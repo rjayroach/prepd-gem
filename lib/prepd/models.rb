@@ -35,8 +35,12 @@ module Prepd
     def create_project
       Dir.chdir(client.path) { system("git clone git@github.com:rjayroach/prepd-project.git #{name}") }
       Dir.chdir(path) do
-        system('git remote rm origin') unless mode.eql?('dev')
-        system("git remote add origin #{repo_url}") unless (mode.eql?('dev') || repo_url.nil?)
+        # Remove the git history and start with a clean repository
+        unless mode.eql?('dev')
+          FileUtils.rm_rf("#{path}/.git")
+          system('git init')
+          system("git remote add origin #{repo_url}") unless repo_url.nil?
+        end
         if File.exists?("#{Prepd.work_dir}/developer.yml")
           FileUtils.cp("#{Prepd.work_dir}/developer.yml", 'developer.yml')
         elsif File.exists?("#{Dir.home}/.prepd-developer.yml")
