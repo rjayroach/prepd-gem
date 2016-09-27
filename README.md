@@ -68,16 +68,38 @@ It takes a lot of services tuned to work together to make smoothly running infra
 - load balancing between micro services
 - manage cluster scaling with compose/swarm mode/ansible or some combination thereof
 
+
+## Definitions
+
+- Client: An organization with one or more projects, e.g Acme Corp
+- Project: A definition of infrastructure provided for one or more applications
+- Application: A logical group of deployable repositories, e.g. a Rails API server and an Ember web client
+
+A Client may have multiples projects. Applications share common infrastructure that is defined by the Project
+
 ## Projects
 
+A project is comprised of infrastructure and applications
+Project infrastructure is defined separately for multiple environments
+Applications are deployed into infrastructure specific to an environment
+
+### Infrastructure
+
+Vagrant machines
+EC2 instances
+Docker swarm network
+
+### Environments
+
+- local Start with both local and development (development is cloud based instance running app software)
+- development
+- staging
+- production
 
 ### Applications
 
-
-## Environments
-
-Start with both local and development (development is cloud based instance running app software)
-
+Application are the content that actually gets deployed. The entire purpose of prepd is to provide a consistent
+and easy to manage infrastructure for each environment into which the application will be deployed.
 
 ## Installation
 
@@ -95,13 +117,44 @@ Or install it yourself as:
 
     $ gem install prepd
 
+### Dependencies
+
+prepd leverages a few projects to build and manage the environments.
+
+#### VirtualBox
+
+TODO: Notes to install VirtualBox
+
+#### Vagrant
+
+TODO: Notes to install Vagrant
+
+```bash
+vagrant plugin install vagrant-vbguest      # keep your VirtualBox Guest Additions up to date
+vagrant plugin install vagrant-cachier      # caches guest packages
+vagrant plugin install vagrant-hostmanager  # updates /etc/hosts file when machines go up/down
+```
+
+
+#### Ansible
+
+Tested with version 2.1.0
+
+```bash
+pip install ansible
+```
+
+
 ## Usage
 
-### Connect to local machine
+```bash
+bin/console
+client = Client.create(name: 'first client')
+project = client.projects.create(name: 'first project')
+# application = project.applications.create(name: 'first application')
+```
 
-1. vagrant ssh master or ssh -A 10.100.199.200
-2. cd {project_name}/ansible/project
-3. run the role configuration, e.g ./dev.yml
+NOTE: Maybe application isn't necessary?
 
 
 ## Development
