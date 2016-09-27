@@ -58,8 +58,9 @@ module Prepd
         File.open('.vault-password.txt', 'w') { |f| f.puts(SecureRandom.uuid) }
       end
       Dir.chdir("#{path}/ansible") do
-        system('ansible-vault encrypt inventory/group_vars/all/vault')
-        system('ansible-vault encrypt inventory/group_vars/local/vault')
+        %w(all local development staging production).each do |env|
+          system("ansible-vault encrypt inventory/group_vars/#{env}/vault")
+        end
         system('git submodule add git@github.com:rjayroach/ansible-roles.git roles')
       end
     end
