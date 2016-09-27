@@ -144,6 +144,18 @@ Tested with version 2.1.0
 pip install ansible
 ```
 
+##### OSX
+```bash
+xcode-select --install
+brew install openssl
+brew link openssl --force
+brew uninstall python
+brew install python --with-brewed-openssl
+sudo easy_install pip
+sudo pip install -U ansible
+sudo pip install -U setuptools cryptography markupsafe
+sudo pip install -U ansible boto
+```
 
 ## Usage
 
