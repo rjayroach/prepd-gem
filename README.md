@@ -77,7 +77,7 @@ It takes a lot of services tuned to work together to make smoothly running infra
 
 A Client may have multiples projects. Applications share common infrastructure that is defined by the Project
 
-## Projects
+### Projects
 
 A project is comprised of infrastructure and applications
 Project infrastructure is defined separately for multiple environments
@@ -140,11 +140,20 @@ vagrant plugin install vagrant-hostmanager  # updates /etc/hosts file when machi
 
 Tested with version 2.1.0
 
-```bash
-pip install ansible
-```
+##### MacOS
 
-##### OSX
+If planning to install on a clean machine:
+- Wipe Mac: http://support.apple.com/kb/PH13871  OR http://support.apple.com/en-us/HT201376
+- Create New User with Admin rights
+
+Install Homebrew:
+
+``bash
+ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+``
+
+Install python with zlib and ssl support
+
 ```bash
 xcode-select --install
 brew install openssl
@@ -155,6 +164,12 @@ sudo easy_install pip
 sudo pip install -U ansible
 sudo pip install -U setuptools cryptography markupsafe
 sudo pip install -U ansible boto
+```
+
+##### Ubuntu
+
+```bash
+apt-get install ansible
 ```
 
 ## Usage
