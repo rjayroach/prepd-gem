@@ -70,29 +70,17 @@ It takes a lot of services tuned to work together to make smoothly running infra
 
 ## Installation
 
-Add this line to your application's Gemfile:
+Prepd is a ruby gem. It also requires software on the local laptop, including VirtualBox, Vagrant and Ansible
 
-```ruby
-gem 'prepd'
+```bash
+gem install prepd
 ```
 
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
-
-    $ gem install prepd
-
-### Dependencies
-
-prepd leverages a few projects to build and manage the environments.
-
-- VirtualBox
+### VirtualBox
 
 TODO: Notes to install VirtualBox
 
-- Vagrant
+### Vagrant
 
 TODO: Notes to install Vagrant
 
@@ -102,8 +90,7 @@ vagrant plugin install vagrant-cachier      # caches guest packages
 vagrant plugin install vagrant-hostmanager  # updates /etc/hosts file when machines go up/down
 ```
 
-
-- Ansible
+### Ansible
 
 Tested with version 2.1.1
 
@@ -115,9 +102,9 @@ If planning to install on a clean machine:
 
 Install Homebrew:
 
-``bash
+```bash
 ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-``
+```
 
 Install python with zlib and ssl support
 
