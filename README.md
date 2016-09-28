@@ -46,7 +46,7 @@ It takes a lot of services tuned to work together to make smoothly running infra
 - Domain names figured out and DNS running on Route53 etc
 - Ability to programatically change and update DNS
 - SSL certs are already installed so we do TLS from the beginning; even on local development
-- Load Balancing is already be setup
+- Load Balancing is setup, configured and running in at least staging and production, but also possible in development
 - HAProxy setup
 
 ### Development Services
@@ -69,39 +69,7 @@ It takes a lot of services tuned to work together to make smoothly running infra
 - manage cluster scaling with compose/swarm mode/ansible or some combination thereof
 
 
-# Defining the Actors
-
-- Client: An organization with one or more projects, e.g Acme Corp
-- Project: A definition of infrastructure provided for one or more applications
-- Application: A logical group of deployable repositories, e.g. a Rails API server and an Ember web client
-
-A Client may have multiples projects. Applications share common infrastructure that is defined by the Project
-
-## Projects
-
-A project is comprised of infrastructure and applications
-Project infrastructure is defined separately for multiple environments
-Applications are deployed into infrastructure specific to an environment
-
-## Infrastructure
-
-Vagrant machines
-EC2 instances
-Docker swarm network
-
-## Environments
-
-- local Start with both local and development (development is cloud based instance running app software)
-- development
-- staging
-- production
-
-## Applications
-
-Application are the content that actually gets deployed. The entire purpose of prepd is to provide a consistent
-and easy to manage infrastructure for each environment into which the application will be deployed.
-
-# Installation
+## Installation
 
 Add this line to your application's Gemfile:
 
@@ -117,15 +85,15 @@ Or install it yourself as:
 
     $ gem install prepd
 
-## Dependencies
+### Dependencies
 
 prepd leverages a few projects to build and manage the environments.
 
-### VirtualBox
+- VirtualBox
 
 TODO: Notes to install VirtualBox
 
-### Vagrant
+- Vagrant
 
 TODO: Notes to install Vagrant
 
@@ -136,15 +104,15 @@ vagrant plugin install vagrant-hostmanager  # updates /etc/hosts file when machi
 ```
 
 
-### Ansible
+- Ansible
 
-Tested with version 2.1.0
+Tested with version 2.1.1
 
 #### Install on MacOS
 
 If planning to install on a clean machine:
-- Wipe Mac: http://support.apple.com/kb/PH13871  OR http://support.apple.com/en-us/HT201376
-- Create New User with Admin rights
+1. Wipe Mac: http://support.apple.com/kb/PH13871  OR http://support.apple.com/en-us/HT201376
+2. Create New User with Admin rights
 
 Install Homebrew:
 
@@ -172,7 +140,43 @@ sudo pip install -U ansible boto
 apt-get install ansible
 ```
 
+
+## Definining the Actors
+
+A Client may have multiples projects. Applications share common infrastructure that is defined by the Project
+
+- Client: An organization with one or more projects, e.g Acme Corp
+- Project: A definition of infrastructure provided for one or more applications
+- Application: A logical group of deployable repositories, e.g. a Rails API server and an Ember web client
+
+
+### Projects
+
+A project is comprised of infrastructure and applications
+Project infrastructure is defined separately for multiple environments
+Applications are deployed into infrastructure specific to an environment
+
+### Infrastructure
+
+Vagrant machines
+EC2 instances
+Docker swarm network
+
+### Environments
+
+- local: virtual machines running on laptop via vagrant whose primary purpose is application development
+- development: primary purpose is also application development, but the infrastructure is deployed in the cloud (AWS)
+- staging: a mirror of production in every way with the possible exception of reduced or part-time resources
+- production: production ;-)
+
+### Applications
+
+Application are the content that actually gets deployed. The entire purpose of prepd is to provide a consistent
+and easy to manage infrastructure for each environment into which the application will be deployed.
+
 ## Usage
+
+### Create a Client Project and Application
 
 ```bash
 bin/console
