@@ -69,7 +69,7 @@ It takes a lot of services tuned to work together to make smoothly running infra
 - manage cluster scaling with compose/swarm mode/ansible or some combination thereof
 
 
-## Definitions
+# Defining the Actors
 
 - Client: An organization with one or more projects, e.g Acme Corp
 - Project: A definition of infrastructure provided for one or more applications
@@ -77,31 +77,31 @@ It takes a lot of services tuned to work together to make smoothly running infra
 
 A Client may have multiples projects. Applications share common infrastructure that is defined by the Project
 
-### Projects
+## Projects
 
 A project is comprised of infrastructure and applications
 Project infrastructure is defined separately for multiple environments
 Applications are deployed into infrastructure specific to an environment
 
-### Infrastructure
+## Infrastructure
 
 Vagrant machines
 EC2 instances
 Docker swarm network
 
-### Environments
+## Environments
 
 - local Start with both local and development (development is cloud based instance running app software)
 - development
 - staging
 - production
 
-### Applications
+## Applications
 
 Application are the content that actually gets deployed. The entire purpose of prepd is to provide a consistent
 and easy to manage infrastructure for each environment into which the application will be deployed.
 
-## Installation
+# Installation
 
 Add this line to your application's Gemfile:
 
@@ -117,15 +117,15 @@ Or install it yourself as:
 
     $ gem install prepd
 
-### Dependencies
+## Dependencies
 
 prepd leverages a few projects to build and manage the environments.
 
-#### VirtualBox
+### VirtualBox
 
 TODO: Notes to install VirtualBox
 
-#### Vagrant
+### Vagrant
 
 TODO: Notes to install Vagrant
 
@@ -136,11 +136,11 @@ vagrant plugin install vagrant-hostmanager  # updates /etc/hosts file when machi
 ```
 
 
-#### Ansible
+### Ansible
 
 Tested with version 2.1.0
 
-##### MacOS
+#### Install on MacOS
 
 If planning to install on a clean machine:
 - Wipe Mac: http://support.apple.com/kb/PH13871  OR http://support.apple.com/en-us/HT201376
@@ -166,7 +166,7 @@ sudo pip install -U setuptools cryptography markupsafe
 sudo pip install -U ansible boto
 ```
 
-##### Ubuntu
+#### Install on Ubuntu
 
 ```bash
 apt-get install ansible
