@@ -76,19 +76,40 @@ Prepd is a ruby gem. It also requires software on the local laptop, including Vi
 gem install prepd
 ```
 
+## Automated Installation of Dependencies
+
+NOTE: This is a TODO
+
+With the gem installed, navigate to it's directory and run bootstrap.sh to install dependencies
+
+```bash
+bundle cd prepd
+./bootstrap.sh
+```
+
+## Manual Installation of Dependencies
+
 ### VirtualBox
 
-TODO: Notes to install VirtualBox
+Install VirtualBox from [here](https://www.virtualbox.org/wiki/Downloads)
 
 ### Vagrant
 
-TODO: Notes to install Vagrant
+Install Vagrant from [here](https://www.vagrantup.com/docs/installation/)
 
 ```bash
 vagrant plugin install vagrant-vbguest      # keep your VirtualBox Guest Additions up to date
 vagrant plugin install vagrant-cachier      # caches guest packages
 vagrant plugin install vagrant-hostmanager  # updates /etc/hosts file when machines go up/down
 ```
+
+vagrant-hostmanager will automatically update the host's /etc/hosts file when vagrant machines go up/down
+In order to do that it needs sudo password or sudo priviledges.
+To avoid being asked for the password every time the hosts file is updated,
+[enable passwordless sudo](https://github.com/devopsgroup-io/vagrant-hostmanager#passwordless-sudo)
+for the specific command that hostmanager uses to update the hosts file
+
+
 
 ### Ansible
 
@@ -188,4 +209,3 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/[USERN
 ## License
 
 The gem is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
-
