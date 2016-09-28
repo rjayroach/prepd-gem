@@ -18,9 +18,8 @@ Prepd aims to address this by providing a 'convention over configruation' approa
 to provisioning infrastructure. From local developer machines (vagrant running linux
 on the developer's laptop) to staging and production running a docker swarm cluster.
 
-With microservice becoming a strategy for a significant number of projects, prepd
-aims to make it dead simple to build and deploy a microservice base application.
-
+With microservices becoming a common application development strategy, prepd
+aims to make it dead simple to build and deploy a microservice based application.
 Beginning with the end in mind, Prepd offers a simple, conventional way to provision
 all this infrastructure, including CI workflow, secrets managment, 12-factor apps
 
