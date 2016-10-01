@@ -48,8 +48,8 @@ module Prepd
         else
           File.open('developer.yml', 'w') do |f|
             f.puts('---')
-            f.puts("git_username: #{system('git config --get user.name')}")
-            f.puts("git_email: #{system('git config --get user.email')}")
+            f.puts("git_username: #{`git config --get user.name`.chomp}")
+            f.puts("git_email: #{`git config --get user.email`.chomp}")
             f.puts('docker_creds: []')
             f.puts("#  - { registry: hub.docker.com, email: user@domain, username: username, password: password }")
           end
