@@ -8,6 +8,7 @@ module Prepd
     validates :name, :path, presence: true
 
     after_create :setup
+    after_destroy :destroy_client
 
     def set_defaults
       self.path = "#{Prepd.options['DATA_DIR']}/#{name}"
@@ -15,6 +16,10 @@ module Prepd
 
     def setup
       FileUtils.mkdir_p(path)
+    end
+
+    def destroy_client
+      FileUtils.rm_rf("#{path}")
     end
   end
 
