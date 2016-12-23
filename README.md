@@ -32,10 +32,14 @@ By operating with a strong opinion, Prepd focuses on supporting best of breed pr
 and best practices with relatively less effort. Configurable and pluggable architecture
 is a secondary goal to getting something up and running. Therefore, choices are made:
 
-- Infrastructure is Vagrant on local machines and AWS in the cloud
-- Ansible is the automation tool used to configure the infrastructure
-- Current product support: nginx, postgres, redis
-- Current project support: rails, emberjs
+- Infrastructure is provisioned via:
+..* Vagrantfile on local machines for development and a local cluster
+..* Terraform plans for clutser infrastructure exclusively on AWS
+- Ansible is the automation tool used to configure the infrastructure for application deployment
+- Docker conatainer deployment is currently the only method for deploying applications
+- The development environment currently supports:
+..* Postgres and Redis for data storage
+..* Rails and Ember for application development
 
 ## What is a Production Ready Environment?
 
@@ -44,23 +48,45 @@ It takes a lot of services tuned to work together to make smoothly running infra
 ### Networking
 - Domain names figured out and DNS running on Route53 etc
 - Ability to programatically change and update DNS
-- SSL certs are already installed so we do TLS from the beginning; even on local development
+- SSL certs are already installed so we do TLS from the beginning on all publicly available infrastructure
 - Load Balancing is setup, configured and running in at least staging and production, but also possible in development
-- HAProxy setup
 
-### Development Services
-- CI is setup and an automated deploy process is used from the outset of the project
-- how are containers getting built? by quay.io, circleCI, jenkins?
-- If CircleCI is building the containers and testing them then on success, where are containers going?
-- If using master, develop, feature branch setup then when does the container get built?
-- Prepd should anticipate that many types of CIs could be plugged in here
+### Development Pipeline Required Services
 
-### Application Services
+Prepd provisions and configures the infrastructure and provides a tool to deploy applications into the infrastructure.
+However, certain aspects of the pipeline are expected to be provided outside of Prepd, which are:
+
+- Continuous Integration
+- Container Build and Store
+
+#### Continuous Integration
+
+CI is expected to be setup and configured as part of an automated deploy process from the outset of the project.
+Here is an example overview of using CircleCI to test a Rails API application
+
+- Create an account on CircleCI and link it to your GitHub account. Authorize CircleCI to access the account
+- Add the Rails API repository as a project on CircleCI. If using rails-templates a circle.yml project already exists
+- Configure slack notifications for when a build completes
+
+#### Container Build and Store
+
+A container repository that also builds containers is expected to be provided.
+Here is an example overview of using quay.io to build a Rails API application container
+
+- Create an account on quay.io and link it to your GitHub account. Authorize quay.io to access the account
+- Add the Rails API repository as a docker repository on quay.io
+- Create a trigger to build the container when there is a push on a certain branch of the GitHub repository
+
+Prepd provides ansible playbooks that invoke docker compose to deploy the container from quay.io to the target infrastructure
+
+### Application Services (TODO)
+
+Prepd will be augmented to provide playbooks for the default Application Group as well as Terraform plans that provide:
+
 - Communication Services, e.g. SMTP, SNS (Push), Slack webhooks, Twilio, etc
 - Logging in both local/development and in staging/production with ELK
-- Monitoring/alert service
-- Additional required 3rd party services (if already known) are configured, setup and tested
-- Prepd wiki template provides a checklist that itemizes these tasks
+- Monitoring/alert service (Prometheus)
+- Additional common 3rd party services as needed
 
 ### Swarm Load Balancing
 - network overlays
@@ -86,6 +112,8 @@ With the gem installed, navigate to it's directory and run bootstrap.sh to insta
 bundle cd prepd
 ./bootstrap.sh
 ```
+
+This will install ansible, pull down ansible-roles and run ansible to install Virtualbox and Vagrant
 
 ## Manual Installation of Dependencies
 
@@ -181,18 +209,65 @@ Docker swarm network
 Application are the content that actually gets deployed. The entire purpose of prepd is to provide a consistent
 and easy to manage infrastructure for each environment into which the application will be deployed.
 
+
 ## Usage
 
-### Create a Client Project and Application
+### New Client
 
-```bash
-bin/console
-client = Client.create(name: 'first client')
-project = client.projects.create(name: 'first project')
+- Create a new GH Company
+- Create an AWS Account and two IAM Groups: Administrators and ReadOnlyAdministrators
+- Create the project in prepd
+
+```ruby
+c = Client.create(name: 'c2p4')
+```
+
+### New Project
+- create a GH repo for the project
+- create an IAM user for project_name-terraform and download the AWS credentials CSV
+- create an IAM user for project_name-ansible and download the AWS credentials CSV
+- use prepd to create the project using the repo_url and path names (tf_creds and ansible_creds) to CSV files
+
+```ruby
+c = Client.find_by(name: 'c2p4')
+c.projects.new(name: 'legos', repo_url: 'git@github.com:my_git_hub_account/legos.git')
+c.tf_creds = 'Users/dude/aws/legos-terraform.csv'
+c.ansible_creds = 'Users/dude/aws/legos-ansible.csv'
+c.save
 # application = project.applications.create(name: 'first application')
 ```
 
-NOTE: Maybe application isn't necessary?
+
+## Notes
+
+### Project Credentials
+Prepd will create the following credential (hidden) files in project_root:
+
+- .boto: AWS IAM credentials that give read only access to Ansible
+- .developer.yml: Developer’s git account (and other account) details
+- .terraform-vars.txt: AWS IAM credentials that give full access to CRUD AWS resources
+- .vault-password.txt: a UUID used to encrypt and decrypt ansible vault files
+- .id_rsa.pub: the public key uploaded to AWS as the primary key pair for accessing EC2 instances
+- .id_rsa: the private key
+
+When cloning this project to a new machine these files will need to be manually copied to the new machine as they are not stored in the repository
+
+If giving a developer access to the machine (but not terraform or ansible) then add their public key to the instance’s ~/.ssh/authorized_keys
+The developer uses ssh-agent forwarding to access the machine from the VM
+
+- either prepd creates the creates these files or a human will copy them
+- terraform will use project_root/id_rsa.pub to upload key_material to AWS for the machine key
+- dev.yml will check if the project_root and: 1) if .boto exists link it, 2) if id_rsa and id_rsa.pub exist then link them
+- the developer can then do ssh-add which will auto load ~/.ssh/id_rsa to login or run ansible
+
+### EC2 Key Pair
+- Terraform does not create key pairs and can only upload an existing key pair
+- key pairs in AWS are stored by region so it makes sense to generate a key pair on the localhost and upload the key_material to AWS as necessary per region
+- Terraform is the single tool to manage infrastructure so it must upload the key pair
+- Ansible is the single tool to configure instances so it needs the key pair in order to access and configure them
+- only prepd or manual transfer is what creates and/or gives access to credentials
+- credentials are *never* stored in a repo including in an encrypted vault
+
 
 
 ## Development
