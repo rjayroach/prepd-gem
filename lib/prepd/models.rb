@@ -15,7 +15,7 @@ module Prepd
     end
 
     def setup
-      FileUtils.mkdir_p(path)
+      FileUtils.mkdir_p(path) unless Dir.exists?(path)
     end
 
     def destroy_client
@@ -35,10 +35,46 @@ module Prepd
     after_create :create_project
     after_destroy :destroy_project
 
+    def encrypt
+      Dir.chdir(path) do
+        system "tar cf #{credentials} .boto .id_rsa .id_rsa.pub .terraform-vars.txt .vault-password.txt"
+      end
+      system "gpg -c #{credentials}"
+      FileUtils.rm(credentials)
+    end
+
+    def decrypt
+      system "gpg #{credentials}.gpg"
+      Dir.chdir(path) do
+        system "tar xf #{credentials}"
+        copy_developer_yml
+      end
+      FileUtils.rm(credentials)
+    end
+
+    def credentials
+      "#{Dir.home}/#{client.name}-#{name}-creds.tar"
+    end
+
+    def copy_developer_yml
+      if File.exists?("#{Prepd.work_dir}/developer.yml")
+        FileUtils.cp("#{Prepd.work_dir}/developer.yml", '.developer.yml')
+      elsif File.exists?("#{Dir.home}/.prepd-developer.yml")
+        FileUtils.cp("#{Dir.home}/.prepd-developer.yml", '.developer.yml')
+      else
+        File.open('.developer.yml', 'w') do |f|
+          f.puts('---')
+          f.puts("git_username: #{`git config --get user.name`.chomp}")
+          f.puts("git_email: #{`git config --get user.email`.chomp}")
+        end
+      end
+    end
+
     #
     # Checkout the prepd-project files and remove the origin
     #
     def create_project
+      return if Dir.exists?(path)
       Dir.chdir(client.path) { system("git clone git@github.com:rjayroach/prepd-project.git #{name}") }
       Dir.chdir(path) do
         # Remove the git history and start with a clean repository
@@ -47,17 +83,7 @@ module Prepd
           system('git init')
           system("git remote add origin #{repo_url}") unless repo_url.nil?
         end
-        if File.exists?("#{Prepd.work_dir}/developer.yml")
-          FileUtils.cp("#{Prepd.work_dir}/developer.yml", '.developer.yml')
-        elsif File.exists?("#{Dir.home}/.prepd-developer.yml")
-          FileUtils.cp("#{Dir.home}/.prepd-developer.yml", '.developer.yml')
-        else
-          File.open('.developer.yml', 'w') do |f|
-            f.puts('---')
-            f.puts("git_username: #{`git config --get user.name`.chomp}")
-            f.puts("git_email: #{`git config --get user.email`.chomp}")
-          end
-        end
+        copy_developer_yml
         require 'securerandom'
         require 'csv'
         File.open('.vault-password.txt', 'w') { |f| f.puts(SecureRandom.uuid) }

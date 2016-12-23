@@ -217,12 +217,20 @@ and easy to manage infrastructure for each environment into which the applicatio
 
 ## New Client
 
-- Create a new GH Company
+This overview assumes a complete greenfield, e.g. that no infrastructure exists, no applications exist or even 3rd
+party service have been setup. To start from zero, then:
+
+- Create a new GH Organization
 - Create an AWS Account and two IAM Groups: Administrators and ReadOnlyAdministrators
+- Create a CI Account and give it access to the GH Organization
+- Create a Docker Private Repository account and give it access to the GH Organization
 - Create the project in prepd
 
+The first four items are outside the scope of this document.
+
 ```ruby
-c = Client.create(name: 'c2p4')
+prepd
+c = Client.create(name: 'Acme')
 ```
 
 ## New Project
@@ -232,18 +240,29 @@ c = Client.create(name: 'c2p4')
 - use prepd to create the project using the repo_url and path names (tf_creds and ansible_creds) to CSV files
 
 ```ruby
-c = Client.find_by(name: 'c2p4')
-c.projects.new(name: 'legos', repo_url: 'git@github.com:my_git_hub_account/legos.git')
-c.tf_creds = 'Users/dude/aws/legos-terraform.csv'
-c.ansible_creds = 'Users/dude/aws/legos-ansible.csv'
+c = Client.find_by(name: 'Acme')
+c.projects.new(name: 'widget', repo_url: 'git@github.com:my_git_hub_account/widget.git')
+c.tf_creds = 'Users/dude/aws/widget-terraform.csv'
+c.ansible_creds = 'Users/dude/aws/widget-ansible.csv'
 c.save
-# application = project.applications.create(name: 'first application')
+```
+
+## New Application
+
+View the [lego README.md](https://github.com/rjayroach/lego) on creating micro serivce applications with Rails and Ember
+
+## Bring Up the Machine
+
+```ruby
+cd ~/prepd/acme/widget
+vagrant up
+vagrant ssh
 ```
 
 
-## Notes
+# Credentials
 
-### Project Credentials
+## Project Credentials
 Prepd will create the following credential (hidden) files in project_root:
 
 - .boto: AWS IAM credentials that give read only access to Ansible
@@ -263,7 +282,7 @@ The developer uses ssh-agent forwarding to access the machine from the VM
 - dev.yml will check if the project_root and: 1) if .boto exists link it, 2) if id_rsa and id_rsa.pub exist then link them
 - the developer can then do ssh-add which will auto load ~/.ssh/id_rsa to login or run ansible
 
-### EC2 Key Pair
+## EC2 Key Pair
 - Terraform does not create key pairs and can only upload an existing key pair
 - key pairs in AWS are stored by region so it makes sense to generate a key pair on the localhost and upload the key_material to AWS as necessary per region
 - Terraform is the single tool to manage infrastructure so it must upload the key pair
@@ -271,6 +290,41 @@ The developer uses ssh-agent forwarding to access the machine from the VM
 - only prepd or manual transfer is what creates and/or gives access to credentials
 - credentials are *never* stored in a repo including in an encrypted vault
 
+## Transfer Credentials to New Machine
+
+The prepd gem can encrypt the credentials using gpg which must be installed on the host machine
+
+The encrypted credentials are written to and read from the user's home directory so that they are not accidentally
+committed to the project repository
+
+### Encrypt
+
+```ruby
+prepd
+c = Client.find_by(name: 'Acme')
+p = c.projects.find_by(name: 'widget')
+p.encrypt
+```
+
+This will create a tar file containing the various project credentials. It will then invoke gpg to encrypt the archive.
+The credentials will be placed in the User's home directory
+
+You will be prompted for a passphrase to enter twice. After doing that send the file by email or other mechanism
+
+### Decrypt
+
+On the target machine, use prepd to decrypt the file and place it in the correct directory
+
+- Clone the project repository
+- Place the gpg tar file in the User's home directory
+- Run prepd. It will expect to find the credentials file in the User's home directory
+
+```ruby
+prepd
+c = Client.find_by(name: 'Acme')
+p = c.projects.find_by(name: 'widget')
+p.decrypt
+```
 
 
 ## Development
