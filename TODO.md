@@ -1,10 +1,8 @@
 # TODO
 
-## Laptop provisioning
+- option to just gpg encrypt ansible-vault.txt rather than the full set of credentials
+- update prepd-project readme when cloning existing to also pull in ansible-roles
 
-- Finish extras, virtualbox and vagrant TODOs in ansible-roles
-
-In prepd:
 - create a bootstrap.sh script that installs Ansible and dependencies, e.g. Homebrew, python, etc
 - add a playbook that provisions a mac or ubuntu laptop with android, packer, extras, etc
 
