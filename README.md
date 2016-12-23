@@ -26,32 +26,35 @@ all this infrastructure, including CI workflow, secrets managment, 12-factor app
 Agile Development requires 'near production' infrastructure to be in place from Day 1.
 Using Prepd, makes that possible quickly and easily without resorting to a PaaS provider.
 
-## Opinions
+## Focus
 
-By operating with a strong opinion, Prepd focuses on supporting best of breed products
-and best practices with relatively less effort. Configurable and pluggable architecture
-is a secondary goal to getting something up and running. Therefore, choices are made:
+The focus of Prepd is on enabling developers to build and deploy applications following current
+industry best practices with as little effort as possible. Being flexible and configurable
+for the wide variety of application deployment strategies is currently a secondary goal to
+getting something up and running. Therefore, choices are made:
 
-- Infrastructure is provisioned via:
+1. Infrastructure is provisioned via:
 ..* Vagrantfile on local machines for development and a local cluster
 ..* Terraform plans for clutser infrastructure exclusively on AWS
-- Ansible is the automation tool used to configure the infrastructure for application deployment
-- Docker conatainer deployment is currently the only method for deploying applications
-- The development environment currently supports:
+2. Ansible is the automation tool used to configure the infrastructure for application deployment
+3. Docker conatainer deployment is currently the only method for deploying applications
+4. The development environment currently supports:
 ..* Postgres and Redis for data storage
 ..* Rails and Ember for application development
 
-## What is a Production Ready Environment?
+A future goal for Prepd is to enable more application types and tool support
+
+# What is a Production Ready Environment?
 
 It takes a lot of services tuned to work together to make smoothly running infrastructure
 
-### Networking
+## Networking
 - Domain names figured out and DNS running on Route53 etc
 - Ability to programatically change and update DNS
 - SSL certs are already installed so we do TLS from the beginning on all publicly available infrastructure
 - Load Balancing is setup, configured and running in at least staging and production, but also possible in development
 
-### Development Pipeline Required Services
+## Development Pipeline Required Services
 
 Prepd provisions and configures the infrastructure and provides a tool to deploy applications into the infrastructure.
 However, certain aspects of the pipeline are expected to be provided outside of Prepd, which are:
@@ -59,7 +62,7 @@ However, certain aspects of the pipeline are expected to be provided outside of 
 - Continuous Integration
 - Container Build and Store
 
-#### Continuous Integration
+### Continuous Integration
 
 CI is expected to be setup and configured as part of an automated deploy process from the outset of the project.
 Here is an example overview of using CircleCI to test a Rails API application
@@ -68,7 +71,7 @@ Here is an example overview of using CircleCI to test a Rails API application
 - Add the Rails API repository as a project on CircleCI. If using rails-templates a circle.yml project already exists
 - Configure slack notifications for when a build completes
 
-#### Container Build and Store
+### Container Build and Store
 
 A container repository that also builds containers is expected to be provided.
 Here is an example overview of using quay.io to build a Rails API application container
@@ -79,7 +82,7 @@ Here is an example overview of using quay.io to build a Rails API application co
 
 Prepd provides ansible playbooks that invoke docker compose to deploy the container from quay.io to the target infrastructure
 
-### Application Services (TODO)
+## Application Services (TODO)
 
 Prepd will be augmented to provide playbooks for the default Application Group as well as Terraform plans that provide:
 
@@ -88,13 +91,13 @@ Prepd will be augmented to provide playbooks for the default Application Group a
 - Monitoring/alert service (Prometheus)
 - Additional common 3rd party services as needed
 
-### Swarm Load Balancing
+## Swarm Load Balancing
 - network overlays
 - load balancing between micro services
 - manage cluster scaling with compose/swarm mode/ansible or some combination thereof
 
 
-## Installation
+# Installation
 
 Prepd is a ruby gem. It also requires software on the local laptop, including VirtualBox, Vagrant and Ansible
 
@@ -102,9 +105,7 @@ Prepd is a ruby gem. It also requires software on the local laptop, including Vi
 gem install prepd
 ```
 
-## Automated Installation of Dependencies
-
-NOTE: This is a TODO
+## Automated Installation of Dependencies (TODO)
 
 With the gem installed, navigate to it's directory and run bootstrap.sh to install dependencies
 
@@ -113,35 +114,17 @@ bundle cd prepd
 ./bootstrap.sh
 ```
 
-This will install ansible, pull down ansible-roles and run ansible to install Virtualbox and Vagrant
+This will:
+
+- Install ansible
+- Clone the ansible-roles repository
+- Run ansible to install Virtualbox and Vagrant
 
 ## Manual Installation of Dependencies
 
-### VirtualBox
-
-Install VirtualBox from [here](https://www.virtualbox.org/wiki/Downloads)
-
-### Vagrant
-
-Install Vagrant from [here](https://www.vagrantup.com/docs/installation/)
-
-```bash
-vagrant plugin install vagrant-vbguest      # keep your VirtualBox Guest Additions up to date
-vagrant plugin install vagrant-cachier      # caches guest packages
-vagrant plugin install vagrant-hostmanager  # updates /etc/hosts file when machines go up/down
-```
-
-vagrant-hostmanager will automatically update the host's /etc/hosts file when vagrant machines go up/down
-In order to do that it needs sudo password or sudo priviledges.
-To avoid being asked for the password every time the hosts file is updated,
-[enable passwordless sudo](https://github.com/devopsgroup-io/vagrant-hostmanager#passwordless-sudo)
-for the specific command that hostmanager uses to update the hosts file
-
-
-
 ### Ansible
 
-Tested with version 2.1.1
+Tested with version 2.2.0
 
 #### Install on MacOS
 
@@ -175,8 +158,30 @@ sudo pip install -U ansible boto
 apt-get install ansible
 ```
 
+### VirtualBox
 
-## Definining the Actors
+Install VirtualBox from [here](https://www.virtualbox.org/wiki/Downloads)
+
+### Vagrant
+
+Install Vagrant from [here](https://www.vagrantup.com/docs/installation/)
+
+```bash
+vagrant plugin install vagrant-vbguest      # keep your VirtualBox Guest Additions up to date
+vagrant plugin install vagrant-cachier      # caches guest packages
+vagrant plugin install vagrant-hostmanager  # updates /etc/hosts file when machines go up/down
+```
+
+#### vagrant-hostmanager
+This plugin automatically updates the host's /etc/hosts file when vagrant machines go up/down
+
+In order to do that it needs sudo password or sudo priviledges.
+To avoid being asked for the password every time the hosts file is updated,
+[enable passwordless sudo](https://github.com/devopsgroup-io/vagrant-hostmanager#passwordless-sudo)
+for the specific command that hostmanager uses to update the hosts file
+
+
+# Prepd Actors
 
 A Client may have multiples projects. Applications share common infrastructure that is defined by the Project
 
@@ -185,34 +190,32 @@ A Client may have multiples projects. Applications share common infrastructure t
 - Application: A logical group of deployable repositories, e.g. a Rails API server and an Ember web client
 
 
-### Projects
+## Projects
 
-A project is comprised of infrastructure and applications
-Project infrastructure is defined separately for multiple environments
-Applications are deployed into infrastructure specific to an environment
+- A project is comprised of Infrastructure Environments (IE) and Application Groups (AG)
+- Infrastructure Environemnts are defined separately for each environment
+- Application Groups are deployed into one or more Infrastructure EnvironmentS
 
-### Infrastructure
+## Infrastructure Environments
 
-Vagrant machines
-EC2 instances
-Docker swarm network
+Infrastructure is either Vagrant machines for development and local environments or EC2 instances for staging and production
 
-### Environments
+Local, Staging and Production Environments use a Docker swarm network to manage applicaiton groups
 
 - local: virtual machines running on laptop via vagrant whose primary purpose is application development
 - development: primary purpose is also application development, but the infrastructure is deployed in the cloud (AWS)
 - staging: a mirror of production in every way with the possible exception of reduced or part-time resources
 - production: production ;-)
 
-### Applications
+## Applications
 
-Application are the content that actually gets deployed. The entire purpose of prepd is to provide a consistent
+Applications are the content that actually gets deployed. The entire purpose of prepd is to provide a consistent
 and easy to manage infrastructure for each environment into which the application will be deployed.
 
 
-## Usage
+# Usage
 
-### New Client
+## New Client
 
 - Create a new GH Company
 - Create an AWS Account and two IAM Groups: Administrators and ReadOnlyAdministrators
@@ -222,7 +225,7 @@ and easy to manage infrastructure for each environment into which the applicatio
 c = Client.create(name: 'c2p4')
 ```
 
-### New Project
+## New Project
 - create a GH repo for the project
 - create an IAM user for project_name-terraform and download the AWS credentials CSV
 - create an IAM user for project_name-ansible and download the AWS credentials CSV
