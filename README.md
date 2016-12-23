@@ -272,23 +272,10 @@ Prepd will create the following credential (hidden) files in project_root:
 - .id_rsa.pub: the public key uploaded to AWS as the primary key pair for accessing EC2 instances
 - .id_rsa: the private key
 
-When cloning this project to a new machine these files will need to be manually copied to the new machine as they are not stored in the repository
-
-If giving a developer access to the machine (but not terraform or ansible) then add their public key to the instance’s ~/.ssh/authorized_keys
-The developer uses ssh-agent forwarding to access the machine from the VM
-
-- either prepd creates the creates these files or a human will copy them
 - terraform will use project_root/id_rsa.pub to upload key_material to AWS for the machine key
-- dev.yml will check if the project_root and: 1) if .boto exists link it, 2) if id_rsa and id_rsa.pub exist then link them
+- config-development.yml checks the project_root and: 1) if .boto exists link it, 2) if id_rsa and id_rsa.pub exist then link them
 - the developer can then do ssh-add which will auto load ~/.ssh/id_rsa to login or run ansible
 
-## EC2 Key Pair
-- Terraform does not create key pairs and can only upload an existing key pair
-- key pairs in AWS are stored by region so it makes sense to generate a key pair on the localhost and upload the key_material to AWS as necessary per region
-- Terraform is the single tool to manage infrastructure so it must upload the key pair
-- Ansible is the single tool to configure instances so it needs the key pair in order to access and configure them
-- only prepd or manual transfer is what creates and/or gives access to credentials
-- credentials are *never* stored in a repo including in an encrypted vault
 
 ## Transfer Credentials to New Machine
 
@@ -326,18 +313,23 @@ p = c.projects.find_by(name: 'widget')
 p.decrypt
 ```
 
+## Authorization
 
-## Development
+If giving a developer access to the machine for development only (not terraform or ansible) then add their public key to the
+instance’s ~/.ssh/authorized_keys. The developer uses ssh-agent forwarding to access the machine from the VM
+
+
+# Development
 
 After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
 To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
 
-## Contributing
+# Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/prepd. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
 
 
-## License
+# License
 
 The gem is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
