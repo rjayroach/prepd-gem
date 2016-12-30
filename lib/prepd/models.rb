@@ -40,7 +40,10 @@ module Prepd
     # Initialize the prepd-project or just copy in developer credentials if the project already exists
     #
     def create_project
-      copy_developer_yml and return if Dir.exists?(path)
+      if Dir.exists?(path)
+        copy_developer_yml
+        return
+      end
       setup_git
       clone_submodules
       copy_developer_yml
