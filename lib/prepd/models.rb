@@ -110,8 +110,8 @@ module Prepd
     # NOTE: The path to credentials is used in the ansible-role prepd
     #
     def generate_credentials
-      self.tf_creds = '/Users/rjayroach/Documents/c2p4/aws/legos-terraform.csv'
-      self.ansible_creds = '/Users/rjayroach/Documents/c2p4/aws/legos-ansible.csv'
+      # self.tf_creds = '/Users/rjayroach/Documents/c2p4/aws/legos-terraform.csv'
+      # self.ansible_creds = '/Users/rjayroach/Documents/c2p4/aws/legos-ansible.csv'
       generate_tf_creds
       generate_ansible_creds
       generate_ssh_keys
@@ -120,7 +120,10 @@ module Prepd
 
     def generate_tf_creds
       self.tf_key, self.tf_secret = CSV.read(tf_creds).last.slice(2,2) if tf_creds
-      return unless tf_key and tf_secret
+      unless tf_key and tf_secret
+        STDOUT.puts 'tf_key and tf_secret need to be set (or set tf_creds to path to CSV file)'
+        return
+      end
       require 'csv'
       Dir.chdir(path) do
         File.open('.terraform-vars.txt', 'w') do |f|
@@ -132,7 +135,10 @@ module Prepd
 
     def generate_ansible_creds
       self.ansible_key, self.ansible_secret = CSV.read(ansible_creds).last.slice(2,2) if ansible_creds
-      return unless ansible_key and ansible_secret
+      unless ansible_key and ansible_secret
+        STDOUT.puts 'ansible_key and ansible_secret need to be set (or set ansible_creds to path to CSV file)'
+        return
+      end
       Dir.chdir(path) do
         File.open('.boto', 'w') do |f|
           f.puts('[Credentials]')
