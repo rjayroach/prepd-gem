@@ -1,6 +1,7 @@
 module Prepd
   class Client < ActiveRecord::Base
     attr_accessor :data_dir
+
     has_many :projects, dependent: :destroy
     has_many :applications, through: :projects
 
@@ -25,8 +26,8 @@ module Prepd
 
 
   class Project < ActiveRecord::Base
-    attr_accessor :mode
     attr_accessor :tf_creds, :tf_key, :tf_secret, :ansible_creds, :ansible_key, :ansible_secret
+
     belongs_to :client, required: true
     has_many :applications, dependent: :destroy
 
@@ -35,26 +36,56 @@ module Prepd
     after_create :create_project
     after_destroy :destroy_project
 
-    def encrypt
+    #
+    # Initialize the prepd-project or just copy in developer credentials if the project already exists
+    #
+    def create_project
+      copy_developer_yml and return if Dir.exists?(path)
+      setup_git
+      clone_submodules
+      copy_developer_yml
+      generate_credentials
+      encrypt_vault_files
+    end
+
+    #
+    # Destory the VM and remove the project from the file system
+    #
+    def destroy_project
+      Dir.chdir(path) { system('vagrant destroy') }
+      FileUtils.rm_rf(path)
+    end
+
+    #
+    # Clone prepd-project, remove the git history and start with a clean repository
+    #
+    def setup_git
+      Dir.chdir(client.path) { system("git clone git@github.com:rjayroach/prepd-project.git #{name}") }
       Dir.chdir(path) do
-        system "tar cf #{credentials} .boto .id_rsa .id_rsa.pub .terraform-vars.txt .vault-password.txt"
+        FileUtils.rm_rf("#{path}/.git")
+        system('git init')
+        system('git add .')
+        system("git commit -m 'First commit from Prepd'")
+        system("git remote add origin #{repo_url}") if repo_url
       end
-      system "gpg -c #{credentials}"
-      FileUtils.rm(credentials)
     end
 
-    def decrypt
-      system "gpg #{credentials}.gpg"
-      Dir.chdir(path) do
-        system "tar xf #{credentials}"
+    #
+    # Clone ansible roles and terraform modules
+    #
+    def clone_submodules
+      Dir.chdir("#{path}/ansible") do
+        system('git submodule add git@github.com:rjayroach/ansible-roles.git roles')
       end
-      FileUtils.rm(credentials)
+      Dir.chdir("#{path}/terraform") do
+        system('git submodule add git@github.com:rjayroach/terraform-modules.git modules')
+      end
     end
 
-    def credentials
-      "#{Dir.home}/#{client.name}-#{name}-creds.tar"
-    end
-
+    #
+    # Copy developer credentials or create them if the file doesn't already exists
+    # TODO: Maybe the creation of developer creds should be done at startup of prepd
+    #
     def copy_developer_yml
       return if File.exists?("#{path}/.developer.yml")
       Dir.chdir(path) do
@@ -67,66 +98,103 @@ module Prepd
             f.puts('---')
             f.puts("git_username: #{`git config --get user.name`.chomp}")
             f.puts("git_email: #{`git config --get user.email`.chomp}")
+            f.puts("docker_username: ")
+            f.puts("docker_password: ")
           end
         end
       end
     end
 
     #
-    # Checkout the prepd-project files and remove the origin
+    # Create AWS credential files for Terraform and Ansible, ssh keys and and ansible-vault encryption key
+    # NOTE: The path to credentials is used in the ansible-role prepd
     #
-    def create_project
-      if Dir.exists?(path)
-        copy_developer_yml
-        return
-      end
-      Dir.chdir(client.path) { system("git clone git@github.com:rjayroach/prepd-project.git #{name}") }
-      copy_developer_yml
+    def generate_credentials
+      self.tf_creds = '/Users/rjayroach/Documents/c2p4/aws/legos-terraform.csv'
+      self.ansible_creds = '/Users/rjayroach/Documents/c2p4/aws/legos-ansible.csv'
+      generate_tf_creds
+      generate_ansible_creds
+      generate_ssh_keys
+      generate_vault_password
+    end
+
+    def generate_tf_creds
+      self.tf_key, self.tf_secret = CSV.read(tf_creds).last.slice(2,2) if tf_creds
+      return unless tf_key and tf_secret
+      require 'csv'
       Dir.chdir(path) do
-        # Remove the git history and start with a clean repository
-        unless mode.eql?('dev')
-          FileUtils.rm_rf("#{path}/.git")
-          system('git init')
-          system("git remote add origin #{repo_url}") unless repo_url.nil?
+        File.open('.terraform-vars.txt', 'w') do |f|
+          f.puts("aws_access_key_id = \"#{tf_key}\"")
+          f.puts("aws_secret_access_key = \"#{tf_secret}\"")
         end
-        require 'csv'
-        self.tf_key, self.tf_secret = CSV.read(tf_creds).last.slice(2,2) if tf_creds
-        if tf_key && tf_secret
-          File.open('.terraform-vars.txt', 'w') { |f|
-            f.puts("aws_access_key_id = \"#{tf_key}\"")
-            f.puts("aws_secret_access_key = \"#{tf_secret}\"")
-          }
-        end
-        self.ansible_creds = '/Users/rjayroach/Documents/c2p4/aws/legos-ansible.csv'
-        self.ansible_key, self.ansible_secret = CSV.read(ansible_creds).last.slice(2,2) if ansible_creds
-        if ansible_key && ansible_secret
-          File.open('.boto', 'w') { |f|
-            f.puts('[Credentials]')
-            f.puts("aws_access_key_id = #{ansible_key}")
-            f.puts("aws_secret_access_key = #{ansible_secret}")
-          }
-        end
-        # generate a key pair to be used as the EC2 key pair
-        system("ssh-keygen -b 2048 -t rsa -f .id_rsa -q -N '' -C 'Key Pair for EC2 (generated by prepd)'")
-        # generate the key to encrypt ansible-vault files
-        require 'securerandom'
-        File.open('.vault-password.txt', 'w') { |f| f.puts(SecureRandom.uuid) }
       end
+    end
+
+    def generate_ansible_creds
+      self.ansible_key, self.ansible_secret = CSV.read(ansible_creds).last.slice(2,2) if ansible_creds
+      return unless ansible_key and ansible_secret
+      Dir.chdir(path) do
+        File.open('.boto', 'w') do |f|
+          f.puts('[Credentials]')
+          f.puts("aws_access_key_id = #{ansible_key}")
+          f.puts("aws_secret_access_key = #{ansible_secret}")
+        end
+      end
+    end
+
+    #
+    # Generate a key pair to be used as the EC2 key pair
+    #
+    def generate_ssh_keys(file_name = '.id_rsa')
+      Dir.chdir(path) { system("ssh-keygen -b 2048 -t rsa -f #{file_name} -q -N '' -C 'ansible@#{name}.#{client.name}.local'") }
+    end
+
+    #
+    # Generate the key to encrypt ansible-vault files
+    #
+    def generate_vault_password(file_name = '.vault-password.txt')
+      require 'securerandom'
+      Dir.chdir(path) { File.open(file_name, 'w') { |f| f.puts(SecureRandom.uuid) } }
+    end
+
+    #
+    # Use ansible-vault to encrypt the inventory group_vars
+    #
+    def encrypt_vault_files
       Dir.chdir("#{path}/ansible") do
         %w(all development local production staging).each do |env|
           system("ansible-vault encrypt inventory/group_vars/#{env}/vault")
         end
-        system('git submodule add git@github.com:rjayroach/ansible-roles.git roles')
       end
     end
 
-    # NOTE: The remote project repository will *not* be destroyed
-    def destroy_project
+    def encrypt(mode = :vault)
       Dir.chdir(path) do
-        system('vagrant destroy')
+        system "tar cf #{credentials_archive} #{file_list(mode)}"
       end
-      # TODO: If user chooses not to destroy, then don't rm_rf
-      FileUtils.rm_rf(path)
+      system "gpg -c #{credentials_archive}"
+      FileUtils.rm(credentials_archive)
+    end
+
+    def decrypt
+      system "gpg #{credentials_archive}.gpg"
+      Dir.chdir(path) do
+        system "tar xf #{credentials_archive}"
+      end
+      FileUtils.rm(credentials_archive)
+    end
+
+    def file_list(mode)
+      return ".boto .id_rsa .id_rsa.pub .terraform-vars.txt .vault-password.txt" if mode.eql?(:all)
+      ".vault-password.txt"
+    end
+
+    def credentials_archive
+      "#{data_path}/#{client.name}-#{name}-creds.tar"
+    end
+
+    def data_path
+      "#{path}/data"
     end
 
     def path

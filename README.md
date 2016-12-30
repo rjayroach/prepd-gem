@@ -294,7 +294,7 @@ p.encrypt
 ```
 
 This will create a tar file containing the various project credentials. It will then invoke gpg to encrypt the archive.
-The credentials will be placed in the User's home directory
+The credentials will be placed in the project's data directory
 
 You will be prompted for a passphrase to enter twice. After doing that send the file by email or other mechanism
 
@@ -303,8 +303,8 @@ You will be prompted for a passphrase to enter twice. After doing that send the 
 On the target machine, use prepd to decrypt the file and place it in the correct directory
 
 - Clone the project repository
-- Place the gpg tar file in the User's home directory
-- Run prepd. It will expect to find the credentials file in the User's home directory
+- Place the gpg tar file in the project's data directory
+- Run prepd. It will expect to find the credentials file in the project's data directory
 
 ```ruby
 prepd
