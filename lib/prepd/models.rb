@@ -180,14 +180,20 @@ module Prepd
       end
       system "gpg -c #{credentials_archive}"
       FileUtils.rm(credentials_archive)
+      "File created: #{credentials_archive}.gpg"
     end
 
     def decrypt
+      unless File.exists?("#{credentials_archive}.gpg")
+        STDOUT.puts "File not found: #{credentials_archive}.gpg"
+        return
+      end
       system "gpg #{credentials_archive}.gpg"
       Dir.chdir(path) do
         system "tar xf #{credentials_archive}"
       end
       FileUtils.rm(credentials_archive)
+      "File processed: #{credentials_archive}.gpg"
     end
 
     def file_list(mode)
