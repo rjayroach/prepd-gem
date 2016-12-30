@@ -178,6 +178,10 @@ module Prepd
     end
 
     def encrypt(mode = :vault)
+      unless executable?('gpg')
+        STDOUT.puts 'gpg executable not found'
+        return
+      end
       Dir.chdir(path) do
         system "tar cf #{credentials_archive} #{file_list(mode)}"
       end
@@ -191,12 +195,23 @@ module Prepd
         STDOUT.puts "File not found: #{credentials_archive}.gpg"
         return
       end
+      unless executable?('gpg')
+        STDOUT.puts 'gpg executable not found'
+        return
+      end
       system "gpg #{credentials_archive}.gpg"
       Dir.chdir(path) do
         system "tar xf #{credentials_archive}"
       end
       FileUtils.rm(credentials_archive)
       "File processed: #{credentials_archive}.gpg"
+    end
+
+    def executable?(name = 'gpg')
+      require 'mkmf'
+      rv = find_executable(name)
+      FileUtils.rm('mkmf.log')
+      rv
     end
 
     def file_list(mode)
