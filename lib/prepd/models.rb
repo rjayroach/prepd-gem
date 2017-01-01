@@ -178,38 +178,44 @@ module Prepd
     end
 
     def encrypt(mode = :vault)
-      unless executable?('gpg')
-        STDOUT.puts 'gpg executable not found'
-        return
-      end
+      return unless executable?('gpg')
       Dir.chdir(path) do
-        system "tar cf #{credentials_archive} #{file_list(mode)}"
+        system "tar cf #{archive(:credentials)} #{file_list(mode)}"
       end
-      system "gpg -c #{credentials_archive}"
-      FileUtils.rm(credentials_archive)
-      "File created: #{credentials_archive}.gpg"
+      system "gpg -c #{archive(:credentials)}"
+      FileUtils.rm(archive(:credentials))
+      "File created: #{archive(:credentials)}.gpg"
     end
 
-    def decrypt
-      unless File.exists?("#{credentials_archive}.gpg")
-        STDOUT.puts "File not found: #{credentials_archive}.gpg"
-        return
-      end
-      unless executable?('gpg')
-        STDOUT.puts 'gpg executable not found'
-        return
-      end
-      system "gpg #{credentials_archive}.gpg"
+    def encrypt_data
+      return unless executable?('gpg')
       Dir.chdir(path) do
-        system "tar xf #{credentials_archive}"
+        system "tar cf #{archive(:data)} data"
       end
-      FileUtils.rm(credentials_archive)
-      "File processed: #{credentials_archive}.gpg"
+      system "gpg -c #{archive(:data)}"
+      FileUtils.rm(archive(:data))
+      "File created: #{archive(:data)}.gpg"
+    end
+
+    def decrypt(type = :credentials)
+      return unless %i(credentials data).include? type
+      return unless executable?('gpg')
+      unless File.exists?("#{archive(type)}.gpg")
+        STDOUT.puts "File not found: #{archive(type)}.gpg"
+        return
+      end
+      system "gpg #{archive(type)}.gpg"
+      Dir.chdir(path) do
+        system "tar xf #{archive(type)}"
+      end
+      FileUtils.rm(archive(type))
+      "File processed: #{archive(type)}.gpg"
     end
 
     def executable?(name = 'gpg')
       require 'mkmf'
       rv = find_executable(name)
+      STDOUT.puts "#{name} executable not found" unless rv
       FileUtils.rm('mkmf.log')
       rv
     end
@@ -219,8 +225,9 @@ module Prepd
       ".vault-password.txt"
     end
 
-    def credentials_archive
-      "#{data_path}/#{client.name}-#{name}-creds.tar"
+    def archive(type = :credentials)
+      t_path = type.eql?(:credentials) ? data_path : path
+      "#{t_path}/#{client.name}-#{name}-#{type}.tar"
     end
 
     def data_path
