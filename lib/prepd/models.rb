@@ -189,11 +189,13 @@ module Prepd
 
     def encrypt_data
       return unless executable?('gpg')
+      archive_path = "#{path}/#{client.name}-#{name}-data.tar"
       Dir.chdir(path) do
-        system "tar cf #{archive(:data)} data"
+        system "tar cf #{archive_path} data"
       end
-      system "gpg -c #{archive(:data)}"
-      FileUtils.rm(archive(:data))
+      system "gpg -c #{archive_path}"
+      FileUtils.rm(archive_path)
+      FileUtils.mv("#{archive_path}.gpg", "#{archive(:data)}.gpg")
       "File created: #{archive(:data)}.gpg"
     end
 
@@ -226,8 +228,7 @@ module Prepd
     end
 
     def archive(type = :credentials)
-      t_path = type.eql?(:credentials) ? data_path : path
-      "#{t_path}/#{client.name}-#{name}-#{type}.tar"
+      "#{data_path}/#{client.name}-#{name}-#{type}.tar"
     end
 
     def data_path
