@@ -2,6 +2,7 @@ require 'prepd/version'
 require 'dotenv'
 require 'active_record'
 require 'sqlite3'
+require 'fileutils'
 
 module Prepd
   def self.work_dir; "#{Dir.home}/.prepd"; end

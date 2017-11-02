@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.summary       = %q{An easy to use tool to create Production Ready Environments for Project Development}
   spec.description   = %q{Prepd assists builders of web application products to start with the end in mind by making it easy to stand up all required infrastructure
   *before* starting to code the application}
-  spec.homepage      = 'http://rjayroach.com/prepd'
+  spec.homepage      = 'https://github.com/rjayroach/prepd-gem'
   spec.license       = 'MIT'
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the 'allowed_push_host'
