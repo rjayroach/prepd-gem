@@ -1,40 +1,11 @@
 module Prepd
-  class Client < ActiveRecord::Base
-    attr_accessor :data_dir
-
-    has_many :projects, dependent: :destroy
-    has_many :applications, through: :projects
-
-    before_validation :set_defaults
-    validates :name, :path, presence: true
-
-    after_create :setup
-    after_destroy :destroy_client
-
-    def set_defaults
-      self.path = "#{Prepd.options['DATA_DIR']}/#{name}"
-    end
-
-    def setup
-      FileUtils.mkdir_p(path) unless Dir.exists?(path)
-    end
-
-    def destroy_client
-      FileUtils.rm_rf("#{path}")
-    end
-  end
-
-
-  class Project < ActiveRecord::Base
+  class Machine < NewObject
     attr_accessor :tf_creds, :tf_key, :tf_secret, :ansible_creds, :ansible_key, :ansible_secret
 
-    belongs_to :client, required: true
-    has_many :applications, dependent: :destroy
-
-    validates :name, presence: true, uniqueness: { scope: :client }
-
-    after_create :create_project
-    after_destroy :destroy_project
+    def create
+      binding.pry
+      env
+    end
 
     #
     # Initialize the prepd-project or just copy in developer credentials if the project already exists
@@ -92,8 +63,8 @@ module Prepd
     def copy_developer_yml
       return if File.exists?("#{path}/.developer.yml")
       Dir.chdir(path) do
-        if File.exists?("#{Prepd.work_dir}/developer.yml")
-          FileUtils.cp("#{Prepd.work_dir}/developer.yml", '.developer.yml')
+        if File.exists?("#{Prepd.config_dir}/developer.yml")
+          FileUtils.cp("#{Prepd.config_dir}/developer.yml", '.developer.yml')
         elsif File.exists?("#{Dir.home}/.prepd-developer.yml")
           FileUtils.cp("#{Dir.home}/.prepd-developer.yml", '.developer.yml')
         else
@@ -233,29 +204,6 @@ module Prepd
 
     def data_path
       "#{path}/data"
-    end
-
-    def path
-     "#{client.path}/#{name}"
-    end
-  end
-
-
-  class Application < ActiveRecord::Base
-    belongs_to :project, required: true
-
-    validates :name, presence: true, uniqueness: { scope: :project }
-
-    after_create :setup
-
-    def setup
-      Dir.chdir("#{project.path}/ansible") do
-        FileUtils.cp_r('application', name)
-      end
-    end
-
-    def path
-     "#{project.path}/ansible/#{name}"
     end
   end
 end

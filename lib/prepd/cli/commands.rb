@@ -13,7 +13,7 @@ module Prepd
   end
 
   def self.rm
-    FileUtils.rm_rf(work_dir)
+    FileUtils.rm_rf(config_dir)
     FileUtils.rm_rf(data_dir)
   end
 

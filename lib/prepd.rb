@@ -1,47 +1,51 @@
 require 'prepd/version'
 require 'dotenv'
-require 'active_record'
-require 'sqlite3'
 require 'fileutils'
 
 module Prepd
-  def self.work_dir; "#{Dir.home}/.prepd"; end
-  def self.data_dir; ENV['DATA_DIR']; end
+  def self.config_dir; "#{Dir.home}/.prepd"; end
 
-  def self.files; Dir.glob("#{work_dir}/*"); end
+  def self.files; Dir.glob("#{config_dir}/*"); end
 
-  def self.config; "#{work_dir}/config"; end
+  def self.config_file; "#{config_dir}/config"; end
 
-  def self.default_settings
+  def self.default_config
     {
       'VERSION' => '1',
-      'DATA_DIR' => "#{Dir.home}/prepd",
-      'VAGRANT_BASE_BOX' => 'debian/contrib-jessie64'
+      'CREATE_TYPE' => 'project',
+      'ENV' => 'dev'
     }
   end
 
-  # Create records for exisitng directories in the DATA_DIR
-  def self.scan
-    clients = Dir.entries(ENV['DATA_DIR'])
-    clients.select { |entry| !entry.starts_with?('.') }.each do |client_name|
-      c = Client.find_or_create_by(name: client_name)
-      projects = Dir.entries("#{ENV['DATA_DIR']}/#{client_name}")
-      projects.select { |entry| !entry.starts_with?('.') }.each do |project_name|
-        c.projects.find_or_create_by(name: project_name)
-      end
-    end
+  # TODO: Probe system for whether it is virutal or not and default accordingly
+  # # hostnamectl status | grep Virtualization will return 0 when found (vm) and 1 when not (host)
+  def self.create_new
+    require "prepd/#{options['CREATE_TYPE']}"
+    project_path = ARGV[1]
+    fail "Path '#{project_path}' already exists!" if Dir.exists?(project_path)
+    obj = Kernel.const_get("Prepd::#{Prepd.options['CREATE_TYPE'].capitalize}").new(path: project_path, env: Prepd.options['ENV'])
+    FileUtils.mkdir_p(project_path)
+    Dir.chdir(project_path) { STDOUT.puts obj.create }
   end
-
-  FileUtils.mkdir_p work_dir
-  ActiveRecord::Base.logger = Logger.new(File.open("#{work_dir}/database.log", 'w'))
-  ActiveRecord::Base.establish_connection(adapter: :sqlite3, database: "#{work_dir}/sqlite.db")
-  unless File.exists?(config)
-    File.open(config, 'a') do |f|
-      default_settings.each { |key, value| f.puts("#{key}=#{value}") }
-    end
-  end
-  Dotenv.load(config)
 end
 
-require 'prepd/schema'
-require 'prepd/models'
+module Prepd
+  class NewObject
+    attr_accessor :path, :env
+
+    def initialize(path:, env:)
+      self.path = path
+      self.env = env
+    end
+  end
+end
+
+module Prepd
+  FileUtils.mkdir_p(config_dir)
+  unless File.exists?(config_file)
+    File.open(config_file, 'a') do |f|
+      default_config.each { |key, value| f.puts("#{key}=#{value}") }
+    end
+  end
+  Dotenv.load(config_file)
+end
