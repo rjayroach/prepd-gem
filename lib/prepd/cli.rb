@@ -2,14 +2,28 @@ require 'pry'
 require 'prepd'
 require 'prepd/cli/options_parser'
 require 'prepd/cli/commands'
-
-Prepd.options = Prepd.default_config
-Prepd.options.merge!(Prepd::Cli::OptionsParser.new.parse)
+require 'ostruct'
 
 module Prepd
-  if ARGV[0].eql?('new')
+  # Write the config file if it does not exist
+  FileUtils.mkdir_p(config_dir) unless Dir.exists?(config_dir)
+  unless File.exists?(config_file)
+    File.open(config_file, 'a') do |f|
+      default_config.each { |key, value| f.puts("#{key}=#{value}") }
+    end
+  end
+
+  # Parse any command line arguments
+  cli_options = Cli::OptionsParser.new.parse
+  Prepd.config = OpenStruct.new(base_config.merge(cli_options))
+  config.mode = ARGV[0].eql?('new') ? :create : :cli
+
+  # Invoke the appropriate action
+  case config.mode
+  when :create
+    config.app_path = ARGV[1]
     create_new
-  else
+  when :cli
     Pry.start(Prepd, prompt: [proc { 'prepd> '}])
   end
 end

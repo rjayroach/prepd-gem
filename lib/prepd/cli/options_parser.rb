@@ -2,30 +2,13 @@ require 'optparse'
 
 module Prepd::Cli
   class OptionsParser
-    attr_accessor :options
-
-    def initialize(options = nil)
-      self.options = options || {}
-    end
-
     def parse
+      options = OpenStruct.new
       optparse = OptionParser.new do |opts|
         opts.banner = "Usage:\n  prepd new AAP_PATH [options]\n\nOptions:"
 
-        opts.on( '--dev', '# Create in development context' ) do |value|
-          options['ENV'] = 'DEV'
-        end
-
-        opts.on( '--prod', '# Create in production context' ) do |value|
-          options['ENV'] = 'PROD'
-        end
-
-        opts.on( '-m', '--machine', '# Create a new virtual machine' ) do |value|
-          options['CREATE_TYPE'] = 'machine'
-        end
-
-        opts.on( '-p', '--project', '# Create a new project' ) do |value|
-          options['CREATE_TYPE'] = 'project'
+        opts.on( '--dev', '# Setup the application with development repositories' ) do |value|
+          options.env = 'development'
         end
 
         opts.on('-h', '--help', '# Display this screen') do
@@ -35,16 +18,28 @@ module Prepd::Cli
           exit
         end
 
+        opts.on( '-m', '--machine', '# Create a new virtual machine' ) do |value|
+          options.create_type = 'machine'
+        end
+
         opts.on('-n', '--no-op', '# Show what would happen but do not execute') do
-          options['no_op'] = true
+          options.no_op = true
+        end
+
+        opts.on( '-p', '--project', '# Create a new project' ) do |value|
+          options.create_type = 'project'
+        end
+
+        opts.on( '--prod', '# Setup the application with production repositories' ) do |value|
+          options.env = 'production'
         end
 
         opts.on('-v', '--verbose', '# Display additional information') do
-          options['verbose'] = true
+          options.verbose = true
         end
       end
       optparse.parse!
-      options
+      options.to_h
     end
   end
 end

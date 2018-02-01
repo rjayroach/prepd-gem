@@ -1,37 +1,20 @@
 module Prepd
-  def self.options=(options)
-    @options = options
-  end
-  def self.options; @options; end
-
   def self.commands
-    puts (methods(false) - %i(:options= :options :commands default_settings)).join("\n")
-  end
-
-  def self.new(name)
-    Client.create(name: name)
+    puts (methods(false) - %i(commands)).join("\n")
   end
 
   def self.rm
     FileUtils.rm_rf(config_dir)
-    FileUtils.rm_rf(data_dir)
   end
 
-  def self.clients; Client.pluck(:name); end
-
-  def self.projects; Project.pluck(:name); end
-
-  def self.current_client
-    @client
-  end
-
-  def self.current_client=(client)
-    STDOUT.puts 'duh'
-    @client = client
-    Dir.chdir(client.path) do
-      Pry.start(client, prompt: [proc { "prepd(#{client.name}) > " }])
-    end
-    STDOUT.puts 'duh2'
-    nil
+  # TODO: Probe system for whether it is virutal or not and default accordingly
+  # # hostnamectl status | grep Virtualization will return 0 when found (vm) and 1 when not (host)
+  def self.create_new
+    fail "You must supply APP_PATH" unless config.app_path
+    fail "Path '#{config.app_path}' already exists!" if Dir.exists?(config.app_path)
+    require "prepd/#{config.create_type}"
+    obj = Kernel.const_get("Prepd::#{config.create_type.capitalize}").new
+    FileUtils.mkdir_p(config.app_path)
+    Dir.chdir(config.app_path) { STDOUT.puts obj.create }
   end
 end

@@ -4,21 +4,18 @@ module Prepd
       setup_git
     end
 
-    def setup
-      Dir.chdir("#{project.path}/ansible") do
-        FileUtils.cp_r('application', name)
-      end
-    end
-
     #
     # Clone prepd-project, remove the git history and start with a clean repository
     #
     def setup_git
-      system('git clone git@github.com:rjayroach/prepd-project.git .')
-      FileUtils.rm_rf('.git')
-      system('git init')
-      system('git add .')
-      system("git commit -m 'First commit from Prepd'")
+      Prepd.log('cloning git project') if config.verbose
+      system('git clone git@github.com:rjayroach/prepd-project.git .') unless config.no_op
+      Prepd.log('initializing new .git repository') if config.verbose
+      FileUtils.rm_rf('.git') unless config.no_op
+      system('git init') unless config.no_op
+      Prepd.log('adding files to first commit') if config.verbose
+      system('git add .') unless config.no_op
+      system("git commit -m 'First commit from Prepd'") unless config.no_op
     end
   end
 end
