@@ -3,8 +3,15 @@ module Prepd
     attr_accessor :tf_creds, :tf_key, :tf_secret, :ansible_creds, :ansible_key, :ansible_secret
 
     def create
-      binding.pry
-      env
+      setup_git
+    end
+
+    def repository
+      :machine
+    end
+
+    def repository_version
+      '0.1.1'
     end
 
     #
@@ -28,20 +35,6 @@ module Prepd
     def destroy_project
       Dir.chdir(path) { system('vagrant destroy') }
       FileUtils.rm_rf(path)
-    end
-
-    #
-    # Clone prepd-project, remove the git history and start with a clean repository
-    #
-    def setup_git
-      Dir.chdir(client.path) { system("git clone git@github.com:rjayroach/prepd-project.git #{name}") }
-      Dir.chdir(path) do
-        FileUtils.rm_rf("#{path}/.git")
-        system('git init')
-        system('git add .')
-        system("git commit -m 'First commit from Prepd'")
-        system("git remote add origin #{repo_url}") if repo_url
-      end
     end
 
     #

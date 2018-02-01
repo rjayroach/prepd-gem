@@ -24,6 +24,7 @@ module Prepd::Cli
 
         opts.on('-n', '--no-op', '# Show what would happen but do not execute') do
           options.no_op = true
+          options.verbose = true
         end
 
         opts.on( '-p', '--project', '# Create a new project' ) do |value|

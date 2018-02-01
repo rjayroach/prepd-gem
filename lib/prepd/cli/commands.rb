@@ -16,5 +16,6 @@ module Prepd
     obj = Kernel.const_get("Prepd::#{config.create_type.capitalize}").new
     FileUtils.mkdir_p(config.app_path)
     Dir.chdir(config.app_path) { STDOUT.puts obj.create }
+    FileUtils.rm_rf(config.app_path) if config.no_op
   end
 end

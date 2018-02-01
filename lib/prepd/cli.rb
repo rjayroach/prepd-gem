@@ -17,6 +17,8 @@ module Prepd
   cli_options = Cli::OptionsParser.new.parse
   Prepd.config = OpenStruct.new(base_config.merge(cli_options))
   config.mode = ARGV[0].eql?('new') ? :create : :cli
+  config.production = true if config.env.eql?('production')
+  config.development = true if config.env.eql?('development')
 
   # Invoke the appropriate action
   case config.mode
