@@ -28,18 +28,18 @@ module Prepd::Cli
           options['CREATE_TYPE'] = 'project'
         end
 
-        opts.on('-h', '--help', 'Display this screen') do
+        opts.on('-h', '--help', '# Display this screen') do
           puts opts
           puts "\nExample:\n   prepd new ~/my/new/project\n"
           puts "\n   This generates a skeletal prepd installation in ~/my/new/project"
           exit
         end
 
-        opts.on('-n', '--no-op', 'Show what would happen but do not execute') do
+        opts.on('-n', '--no-op', '# Show what would happen but do not execute') do
           options['no_op'] = true
         end
 
-        opts.on('-v', '--verbose', 'Display additional information') do
+        opts.on('-v', '--verbose', '# Display additional information') do
           options['verbose'] = true
         end
       end

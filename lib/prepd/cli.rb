@@ -5,8 +5,11 @@ require 'prepd/cli/commands'
 
 Prepd.options = Prepd.default_config
 Prepd.options.merge!(Prepd::Cli::OptionsParser.new.parse)
-if ARGV[0].eql?('new')
-  Prepd.create_new
-else
-  Pry.start(Prepd, prompt: [proc { 'prepd> '}])
+
+module Prepd
+  if ARGV[0].eql?('new')
+    create_new
+  else
+    Pry.start(Prepd, prompt: [proc { 'prepd> '}])
+  end
 end

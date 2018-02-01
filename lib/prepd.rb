@@ -1,4 +1,3 @@
-require 'prepd/version'
 require 'dotenv'
 require 'fileutils'
 
