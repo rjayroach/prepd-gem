@@ -8,7 +8,7 @@ module Prepd::Cli
         opts.banner = "Usage:\n  prepd new AAP_PATH [options]\n\nOptions:"
 
         opts.on( '--dev', '# Setup the application with development repositories' ) do |value|
-          options.env = 'development'
+          options.development = 'true'
         end
 
         opts.on('-h', '--help', '# Display this screen') do
@@ -19,7 +19,7 @@ module Prepd::Cli
         end
 
         opts.on( '-m', '--machine', '# Create a new virtual machine' ) do |value|
-          options.create_type = 'machine'
+          options.create_type = :machine
         end
 
         opts.on('-n', '--no-op', '# Show what would happen but do not execute') do
@@ -28,15 +28,15 @@ module Prepd::Cli
         end
 
         opts.on( '-p', '--project', '# Create a new project' ) do |value|
-          options.create_type = 'project'
-        end
-
-        opts.on( '--prod', '# Setup the application with production repositories' ) do |value|
-          options.env = 'production'
+          options.create_type = :project
         end
 
         opts.on('-v', '--verbose', '# Display additional information') do
           options.verbose = true
+        end
+
+        opts.on('--yes', '# Automatically say yes') do
+          options.yes = true
         end
       end
       optparse.parse!

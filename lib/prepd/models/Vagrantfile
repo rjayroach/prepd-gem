@@ -1,0 +1,144 @@
+machine_domain = '<%= config.app_name %>'
+host_home_path = Dir.home
+machine_home_path = '/home/vagrant'
+prepd_path = 'prepd'
+ansible_roles_path = ".ansible/roles"
+
+# The host's directories that will be mounted in the virtual machine
+mount_paths = {
+  # "#{host_prepd_path}/projects/#{machine_domain}" => "#{machine_prepd_path}/projects",
+  # '.' => "#{machine_prepd_config_path}/machine",
+  "#{host_home_path}/#{prepd_path}" => "#{machine_home_path}/#{prepd_path}",
+  "#{host_home_path}/#{ansible_roles_path}" => "#{machine_home_path}/#{ansible_roles_path}"
+}
+
+# The virtual machine's interface to connect to via ssh
+ssh_intf = 'eth1'
+
+# The number of machines in the cluster (in addition to node0)
+cluster_node_count = 3
+
+# The ports to open between the VM and the host
+port_forwards = [
+  2375,  # docker
+  2376,  # docker
+  3000,  # rails
+  4200,  # ember
+  7357,
+  # 35729, # reload
+  49152  # livereload
+]
+
+# def dev_mode?
+#   File.executable?('.dev')
+# end
+
+# Write the current working directory to the machine's configuration file
+#   to ~/prepd/config/developer/prepd-developer.yml
+if %w(up provision).include?(ARGV[0])
+  STDOUT.puts 'Writing machine configuration...'
+  prepd_machine_path = "#{host_home_path}/#{prepd_path}/config/developer"
+  prepd_machine_config = "#{prepd_machine_path}/prepd-developer.yml"
+  FileUtils.mkdir_p(prepd_machine_path) unless Dir.exists?(prepd_machine_path)
+  FileUtils.touch(prepd_machine_config) unless File.exists?(prepd_machine_config)
+  pconfig = YAML.load_file(prepd_machine_config) || {}
+  developer = pconfig['prepd_developer'] ||= {}
+  machines = developer['machines'] ||= {}
+  machine = machines[machine_domain] ||= {}
+  machine['path'] = Dir.pwd
+  File.open(prepd_machine_config, 'w') { |f| f.write(pconfig.to_yaml) }
+  STDOUT.puts 'Done'
+end
+
+
+Vagrant.configure(2) do |config|
+  machine_domain = '<%= config.app_name %>'
+
+  config.vm.box = 'debian/contrib-stretch64'
+  config.vm.box_check_update = false
+
+  # Add user's ssh key to vagrant vm
+  config.vm.provision :shell do |shell|
+    ssh_pub_key = File.readlines("#{Dir.home}/.ssh/id_rsa.pub").first.strip
+    shell.inline = <<-SHELL
+      echo '' >> /home/vagrant/.ssh/authorized_keys
+      echo #{ssh_pub_key} >> /home/vagrant/.ssh/authorized_keys
+    SHELL
+  end
+
+  # TODO: These packages will be installed by ansible after the machine has booted
+  #    apt-get install -y ruby ruby-dev sqlite3 libsqlite3-dev ruby-bundler
+  #    gem install prepd
+
+  # Add OS and pip packages for Ansible
+  config.vm.provision :shell do |shell|
+    shell.inline = <<-SHELL
+      echo "Installing Ansible..."
+      apt-get update
+      apt-get install -y apt-transport-https libssl-dev libffi-dev python-dev build-essential python-setuptools git
+      easy_install pip
+      pip install -U setuptools cryptography markupsafe
+      pip install -U ansible boto
+    SHELL
+  end
+
+  config.ssh.forward_agent = true
+
+  config.vm.provider :virtualbox do |v|
+    v.memory = 2048
+    v.cpus = 1
+    v.customize ['guestproperty', 'set', :id, '/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold', 10000 ]
+    v.customize ['modifyvm', :id, '--nictype1', 'virtio']
+  end
+
+  if Vagrant.has_plugin?('vagrant-hostmanager')
+    config.hostmanager.enabled = true
+    config.hostmanager.manage_host = true
+    config.hostmanager.manage_guest = true
+    config.hostmanager.ignore_private_ip = false
+  end
+
+  (0..(cluster_node_count + 1)).each do |i|
+    autostart = forward_ports = i.eql?(0)
+    config.vm.define "node#{i}", autostart: autostart do |node|
+      node.vm.provider :virtualbox do |v|
+        v.name = "node#{i}.#{machine_domain}.local"
+      end
+
+      # NFS directory mounts
+      node.vm.synced_folder '.', '/vagrant', disabled: true
+      mount_paths.each do |host_path, machine_path|
+        node.vm.synced_folder host_path, machine_path, type: 'nfs',
+          mount_options: ['rw', 'vers=3', 'tcp'],
+          linux__nfs_options: ['rw', 'no_subtree_check', 'all_squash', 'async']
+      end
+
+      # Networking
+      node.vm.hostname = "node#{i}.#{machine_domain}.local"
+      node.vm.network 'private_network', type: :dhcp, nic_type: 'virtio'
+
+      if Vagrant.has_plugin?('vagrant-hostmanager')
+        node.hostmanager.aliases = ["node#{i}.local"]
+        node.hostmanager.ip_resolver = proc do |vm, resolving_vm|
+          if hostname = (vm.ssh_info && vm.ssh_info[:host])
+            `vagrant ssh node#{i} -c "/sbin/ip addr show #{ssh_intf} | grep 'inet '"`.split[1].split('/')[0]
+          end
+        end
+      end
+
+      port_forwards.each do |port|
+        node.vm.network 'forwarded_port', guest: port, host: port, auto_correct: true
+      end if forward_ports
+    end
+  end
+
+  if Vagrant.has_plugin?('vagrant-cachier')
+    config.cache.scope = :box
+    config.cache.auto_detect = false
+    config.cache.enable :apt
+    config.cache.synced_folder_opts = {
+      owner: '_apt',
+      group: '_apt'
+    }
+  end
+end

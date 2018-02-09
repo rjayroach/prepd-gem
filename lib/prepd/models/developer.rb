@@ -1,19 +1,78 @@
 module Prepd
-  class Machine < NewObject
+  class Developer < Base
     attr_accessor :tf_creds, :tf_key, :tf_secret, :ansible_creds, :ansible_key, :ansible_secret
 
     def create
-      setup_git
+      # setup_git
+      create_password_file
+      clone_dependencies
+      binding.pry
+      '1'
     end
 
     def repository
-      :machine
+      :developer
     end
 
     def repository_version
       '0.1.1'
     end
 
+    def create_password_file
+      # TODO: The directory should not be coded here; all operations here should already be in the correct directory
+      password_dir = "#{Dir.home}/prepd/config/developer/vault-keys"
+      password_file = "#{password_dir}/password.txt"
+      return if File.exists?(password_file)
+      FileUtils.mkdir_p(password_dir)
+      generate_vault_password(password_file)
+    end
+
+    #
+    # Clone prepd-roles, terraplate and terraplate-components
+    #
+    def clone_dependencies
+      log = config.verbose ? '' : '--quiet'
+      ansible_roles_path = "#{Dir.home}/.ansible/roles"
+      FileUtils.mkdir_p(ansible_roles_path)
+      Dir.chdir(ansible_roles_path) do
+        dependencies.each do |key, value|
+          system("git clone #{log} git@github.com:rjayroach/#{key} #{value}") unless Dir.exists?("#{ansible_roles_path}/#{value}")
+        end
+      end
+    end
+
+    def dependencies
+      {'prepd-roles' => 'prepd', 'terraplate' => 'terraplate', 'terraplate-components' => 'terraplate-components' }
+    end
+
+
+
+    ### Developer utilty methods
+    def prepd_developer_config
+      @prepd_developer_config ||= (
+        if File.exists?(prepd_developer_config_path)
+          YAML.load_file(prepd_developer_config_path)['prepd_developer']
+        else
+          {}
+        end
+      )
+    end
+
+    def write_prepd_developer_config
+      FileUtils.mkdir_p(prepd_developer_path) unless Dir.exists?(prepd_developer_path)
+      File.open(prepd_developer_config_path, 'w') do |f|
+        f.write({ 'prepd_developer' => prepd_developer_config.to_yaml })
+      end
+    end
+
+    def prepd_developer_config_path
+      "#{prepd_developer_path}/prepd-developer.yml"
+    end
+
+    def prepd_developer_path
+      "#{config.prepd_dir}/config/developer"
+    end
+    #############
     #
     # Initialize the prepd-project or just copy in developer credentials if the project already exists
     #
@@ -27,26 +86,6 @@ module Prepd
       copy_developer_yml
       generate_credentials
       encrypt_vault_files
-    end
-
-    #
-    # Destory the VM and remove the project from the file system
-    #
-    def destroy_project
-      Dir.chdir(path) { system('vagrant destroy') }
-      FileUtils.rm_rf(path)
-    end
-
-    #
-    # Clone ansible roles and terraform modules
-    #
-    def clone_submodules
-      Dir.chdir("#{path}/ansible") do
-        system('git submodule add git@github.com:rjayroach/ansible-roles.git roles')
-      end
-      Dir.chdir("#{path}/terraform") do
-        system('git submodule add git@github.com:rjayroach/terraform-modules.git modules')
-      end
     end
 
     #
@@ -120,14 +159,6 @@ module Prepd
     #
     def generate_ssh_keys(file_name = '.id_rsa')
       Dir.chdir(path) { system("ssh-keygen -b 2048 -t rsa -f #{file_name} -q -N '' -C 'ansible@#{name}.#{client.name}.local'") }
-    end
-
-    #
-    # Generate the key to encrypt ansible-vault files
-    #
-    def generate_vault_password(file_name = '.vault-password.txt')
-      require 'securerandom'
-      Dir.chdir(path) { File.open(file_name, 'w') { |f| f.puts(SecureRandom.uuid) } }
     end
 
     #
