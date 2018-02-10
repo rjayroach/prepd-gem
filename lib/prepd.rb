@@ -3,21 +3,33 @@ require 'fileutils'
 require 'active_record'
 require 'sqlite3'
 
-
 module Prepd
-  def self.config_dir; "#{Dir.home}/.prepd"; end
+  DEV_DIR = "#{Dir.home}/prepd-dev".freeze
+  PROD_DIR = Dir.home.freeze
+
+  def self.base_dir
+    @base_dir ||= cli_options.development.eql?('true') ? (cli_options.delete_field('directory') || DEV_DIR) : PROD_DIR
+  end
+
+  def self.config_dir; "#{base_dir}/.prepd"; end
 
   def self.config_file; "#{config_dir}/config"; end
 
   def self.default_config
     {
       'version' => '1',
-      'prepd_dir' => "#{Dir.home}/prepd"
+      'prepd_dir' => "#{base_dir}/prepd",
     }
   end
 
   def self.base_config
+    write_config_file unless File.exists?(config_file)
     default_config.merge(Dotenv.load(config_file))
+  end
+
+  def self.write_config_file
+    FileUtils.mkdir_p(config_dir) unless Dir.exists?(config_dir)
+    File.open(config_file, 'w') { |f| default_config.each { |key, value| f.puts("#{key}=#{value}") } }
   end
 
   def self.config=(config)
@@ -25,6 +37,12 @@ module Prepd
   end
 
   def self.config; @config; end
+
+  def self.cli_options=(config)
+    @cli_options = config
+  end
+
+  def self.cli_options; @cli_options; end
 
   def self.log(message)
     STDOUT.puts(message)

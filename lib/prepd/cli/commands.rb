@@ -6,7 +6,7 @@ require 'prepd/models/machine_project'
 
 module Prepd
   def self.commands
-    puts (methods(false) - %i(commands)).join("\n")
+    %i(install new ls show rm) # methods(false) - %i(commands)
   end
 
   def self.install

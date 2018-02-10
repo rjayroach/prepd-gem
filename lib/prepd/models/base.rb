@@ -14,15 +14,19 @@ module Prepd
     end
 
     def as_json(options = {})
-      super(except: [:id])
+      super(only: [:name])
+    end
+
+    def kind
+      self.class.name.split('::').last.downcase
     end
 
     def to_yaml
-      { 'prepd_manifest' => { 'kind' => self.class.name.split('::').last.downcase, 'data' => for_yaml } }.to_yaml
+      { 'kind' => kind, 'data' => for_yaml }.to_yaml
     end
 
     def from_yaml
-      File.exists?(config_file_path) ? YAML.load_file(config_file_path)['prepd_manifest'] : {}
+      File.exists?(config_file_path) ? YAML.load_file(config_file_path) : {}
     end
 
     def write_config
@@ -31,7 +35,7 @@ module Prepd
     end
 
     def config_file_path
-      "#{config_dir}/prepd-manifest.yml"
+      "#{config_dir}/prepd-#{kind}.yml"
     end
 
     #
@@ -65,7 +69,7 @@ module Prepd
     #
     # Generate the key to encrypt ansible-vault files
     #
-    def generate_vault_password(file_name = '.vault-password.txt')
+    def write_password_file(file_name = 'password.txt')
       require 'securerandom'
       File.open(file_name, 'w') { |f| f.puts(SecureRandom.uuid) }
       nil

@@ -1,4 +1,4 @@
-machine_domain = '<%= config.app_name %>'
+machine_domain = '<%= name %>'
 host_home_path = Dir.home
 machine_home_path = '/home/vagrant'
 prepd_path = 'prepd'
@@ -52,7 +52,7 @@ end
 
 
 Vagrant.configure(2) do |config|
-  machine_domain = '<%= config.app_name %>'
+  machine_domain = '<%= name %>'
 
   config.vm.box = 'debian/contrib-stretch64'
   config.vm.box_check_update = false

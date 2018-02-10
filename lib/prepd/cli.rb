@@ -5,24 +5,13 @@ require 'prepd/cli/commands'
 require 'ostruct'
 
 module Prepd
-  # Prepare the database
-  ActiveRecord::Base.logger = Logger.new(File.open("#{config_dir}/database.log", 'w'))
-  ActiveRecord::Base.establish_connection(adapter: :sqlite3, database: "#{config_dir}/sqlite.db")
-  require 'prepd/models/schema'
-
-  # Write the config file if it does not exist
-  FileUtils.mkdir_p(config_dir) unless Dir.exists?(config_dir)
-  unless File.exists?(config_file)
-    File.open(config_file, 'a') do |f|
-      default_config.each { |key, value| f.puts("#{key}=#{value}") }
-    end
-  end
-
   # Parse any command line arguments
-  cli_options = Cli::OptionsParser.new.parse
-  Prepd.config = OpenStruct.new(base_config.merge(cli_options))
+  Prepd.cli_options = OpenStruct.new(Cli::OptionsParser.new.parse)
 
-  # Are we in development or production?
+  # Load the default config, override with config file valuse and finally override with any command line options
+  Prepd.config = OpenStruct.new(base_config.merge(cli_options.to_h))
+
+  # Set the config.development? and config.production? values
   development_mode = (config.development && config.delete_field('development').eql?('true')) ? true : false
   config.send('production?=', !development_mode)
   config.send('development?=', development_mode)
@@ -30,16 +19,21 @@ module Prepd
   # Set config values based on machine probe, defaults, config file and cli arguments
   config.machine_type = machine_is_host? ? :host : :vm
   config.create_type ||= machine_is_host? ? :machine : :project
+  config.config_dir = config_dir
   config.command = ARGV[0] ? ARGV.shift.to_sym : :cli
 
-  # Invoke the appropriate action
+  # Prepare the database
+  ActiveRecord::Base.logger = Logger.new(File.open("#{config.config_dir}/database.log", 'w'))
+  ActiveRecord::Base.establish_connection(adapter: :sqlite3, database: "#{config.config_dir}/sqlite.db")
+  require 'prepd/models/schema'
+
+  # Process the command or invoke the console
   if config.command.eql?(:cli)
     Pry.start(Prepd, prompt: [proc { 'prepd> '}])
+  elsif commands.include?(config.command)
+    STDOUT.puts(Prepd.send(config.command))
   else
-    begin
-      STDOUT.puts(Prepd.send(config.command))
-    # rescue NoMethodError => e
-    #   STDOUT.puts('No such command')
-    end
+    # TODO: show the 'runtime' help
+    STDOUT.puts("#{config.command} - No such command")
   end
 end

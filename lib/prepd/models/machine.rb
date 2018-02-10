@@ -1,6 +1,7 @@
 module Prepd
   class Machine < Base
     VAGRANTFILE = 'Vagrantfile'.freeze
+    NAME = %x(hostname -f).split('.')[1].freeze
 
     has_many :machine_projects
     has_many :projects, through: :machine_projects
@@ -9,6 +10,10 @@ module Prepd
     before_destroy :destroy_vm, :delete_config_dir
 
     validates :name, presence: true, uniqueness: true  # "You must supply APP_PATH" unless name
+
+    def self.ref
+      find_by(name: NAME)
+    end
 
     def write_vagrantfile
       FileUtils.mkdir_p(config_dir) unless Dir.exists?(config_dir)

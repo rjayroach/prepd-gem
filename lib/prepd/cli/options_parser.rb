@@ -7,11 +7,14 @@ module Prepd::Cli
       optparse = OptionParser.new do |opts|
         opts.banner = "Usage:\n  prepd new AAP_PATH [options]\n\nOptions:"
 
-        opts.on( '--dev', '# Setup the application with development repositories' ) do |value|
+        opts.on( '--dev [DIRECTORY]', '# Setup the application with development repositories' ) do |value|
           options.development = 'true'
+          options.directory = value
         end
 
         opts.on('-h', '--help', '# Display this screen') do
+          # TODO: If Dir.pwd is a prepd project then putput the 'runtime' commands here
+          # Otherwise output the 'prepd new --help' is appropriate
           puts opts
           puts "\nExample:\n   prepd new ~/my/new/project\n"
           puts "\n   This generates a skeletal prepd installation in ~/my/new/project"

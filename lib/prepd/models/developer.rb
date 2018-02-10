@@ -1,30 +1,40 @@
 module Prepd
   class Developer < Base
-    attr_accessor :tf_creds, :tf_key, :tf_secret, :ansible_creds, :ansible_key, :ansible_secret
+    REPOSITORY_VERSION = '0.1.1'.freeze
+    REPOSITORY_NAME = 'prepd'.freeze
 
-    def create
-      # setup_git
-      create_password_file
-      clone_dependencies
+    # attr_accessor :tf_creds, :tf_key, :tf_secret, :ansible_creds, :ansible_key, :ansible_secret
+    # TODO: Rename prepd repo to prepd-docs
+    # Commit everything ot prepd-developer and push
+    # Change repo name to prepd
+    # TODO:
+    # In dev mode the directories are ~/prepd-dev/.prepd and ~/prepd-dev/prepd
+
+    before_create :check_count
+    after_create :setup_host
+
+    def check_count
+      throw :abort if self.class.count > 0
+    end
+
+    def setup_host
       binding.pry
+      # setup_git  # clone prepd repo to ~/.prepd
+      # create_password_file
+      # clone_dependencies
       '1'
     end
 
-    def repository
-      :developer
-    end
-
-    def repository_version
-      '0.1.1'
-    end
-
     def create_password_file
-      # TODO: The directory should not be coded here; all operations here should already be in the correct directory
-      password_dir = "#{Dir.home}/prepd/config/developer/vault-keys"
+      password_dir = "#{config_dir}/vault-keys"
       password_file = "#{password_dir}/password.txt"
       return if File.exists?(password_file)
       FileUtils.mkdir_p(password_dir)
-      generate_vault_password(password_file)
+      write_password_file(password_file)
+    end
+
+    def config_dir
+      "#{config.prepd_dir}/config/developer"
     end
 
     #

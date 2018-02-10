@@ -6,18 +6,18 @@ module Prepd
     has_many :machine_projects
     has_many :machines, through: :machine_projects
 
-    after_save :setup_git_x, :write_config
+    after_save :write_config
     # TODO:
     # The git repo needs to be cloned in the proper directory in the VM; not the same as the config directory
 
-    before_validation :set_machine
+    after_create :set_machine
     validates :name, presence: true, uniqueness: true  # "You must supply APP_PATH" unless name
 
-    # TODO:
-    # The project is created on a machine
     # Get the machine that this project is created on and add it to the array and then save
     # Both the project and the machine should be saved forcing an update of the YAML files
     def set_machine
+      Machine.ref.projects << self
+      Machine.ref.save
     end
 
     # TODO: Projects have a client/project path, not just a name
@@ -25,9 +25,9 @@ module Prepd
       "#{config.prepd_dir}/config/projects/#{name}"
     end
 
-    # as_json with projects array included
+    # as_json with machines array included
     def for_yaml
-      as_json.merge({ 'machines' => machines.as_json })
+      as_json #.merge({ 'machines' => machines.as_json })
     end
 
     def setup_git_x
