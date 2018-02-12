@@ -27,7 +27,8 @@ port_forwards = [
 if %w(up provision).include?(ARGV[0]); end
 
 Vagrant.configure(2) do |config|
-  domain, x, y, tld = Dir.pwd.split('/').reverse[0..3]
+  subdomain, x, y, domain = Dir.pwd.split('/').reverse[0..3]
+  tld = 'local'
 
   config.vm.box = 'debian/contrib-stretch64'
   config.vm.box_check_update = false
@@ -78,7 +79,7 @@ Vagrant.configure(2) do |config|
     autostart = forward_ports = i.eql?(0)
     config.vm.define "node#{i}", autostart: autostart do |node|
       node.vm.provider :virtualbox do |v|
-        v.name = "node#{i}.#{domain}.#{tld}"
+        v.name = "node#{i}.#{subdomain}.#{domain}.#{tld}"
       end
 
       # NFS directory mounts
@@ -90,7 +91,7 @@ Vagrant.configure(2) do |config|
       end
 
       # Networking
-      node.vm.hostname = "node#{i}.#{domain}.#{tld}"
+      node.vm.hostname = "node#{i}.#{subdomain}.#{domain}.#{tld}"
       node.vm.network 'private_network', type: :dhcp, nic_type: 'virtio'
 
       if Vagrant.has_plugin?('vagrant-hostmanager')

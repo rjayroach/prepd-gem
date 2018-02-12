@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.summary       = %q{An easy to use tool to create Production Ready Environments for Project Development}
   spec.description   = %q{Prepd assists builders of web application products to start with the end in mind by making it easy to stand up all required infrastructure
   *before* starting to code the application}
-  spec.homepage      = 'https://github.com/rjayroach/prepd-gem'
+  spec.homepage      = 'https://github.com/rjayroach/prepd'
   spec.license       = 'MIT'
 
   spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features|docs)/}) }
