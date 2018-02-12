@@ -1,15 +1,10 @@
-machine_domain = '<%= name %>'
-host_home_path = Dir.home
-machine_home_path = '/home/vagrant'
-prepd_path = 'prepd'
-ansible_roles_path = ".ansible/roles"
-
-# The host's directories that will be mounted in the virtual machine
+# Mount the host_directory => VM directory
+# NOTE: NFS exports cannot be nested; If there is an error, make sure that the attempted mounts here
+# are not subdirectories of an already NFS mounted directory in the directory tree
 mount_paths = {
-  # "#{host_prepd_path}/projects/#{machine_domain}" => "#{machine_prepd_path}/projects",
-  # '.' => "#{machine_prepd_config_path}/machine",
-  "#{host_home_path}/#{prepd_path}" => "#{machine_home_path}/#{prepd_path}",
-  "#{host_home_path}/#{ansible_roles_path}" => "#{machine_home_path}/#{ansible_roles_path}"
+  "#{Pathname.new(Dir.pwd).parent.parent.parent}" => '/home/vagrant/prepd',
+  "#{Dir.home}/.prepd/share" => '/usr/share/prepd',
+  "#{Dir.home}/.ansible/roles" => '/usr/share/ansible/roles'
 }
 
 # The virtual machine's interface to connect to via ssh
@@ -29,30 +24,10 @@ port_forwards = [
   49152  # livereload
 ]
 
-# def dev_mode?
-#   File.executable?('.dev')
-# end
-
-# Write the current working directory to the machine's configuration file
-#   to ~/prepd/config/developer/prepd-developer.yml
-if %w(up provision).include?(ARGV[0])
-  STDOUT.puts 'Writing machine configuration...'
-  prepd_machine_path = "#{host_home_path}/#{prepd_path}/config/developer"
-  prepd_machine_config = "#{prepd_machine_path}/prepd-developer.yml"
-  FileUtils.mkdir_p(prepd_machine_path) unless Dir.exists?(prepd_machine_path)
-  FileUtils.touch(prepd_machine_config) unless File.exists?(prepd_machine_config)
-  pconfig = YAML.load_file(prepd_machine_config) || {}
-  developer = pconfig['prepd_developer'] ||= {}
-  machines = developer['machines'] ||= {}
-  machine = machines[machine_domain] ||= {}
-  machine['path'] = Dir.pwd
-  File.open(prepd_machine_config, 'w') { |f| f.write(pconfig.to_yaml) }
-  STDOUT.puts 'Done'
-end
-
+if %w(up provision).include?(ARGV[0]); end
 
 Vagrant.configure(2) do |config|
-  machine_domain = '<%= name %>'
+  domain, x, y, tld = Dir.pwd.split('/').reverse[0..3]
 
   config.vm.box = 'debian/contrib-stretch64'
   config.vm.box_check_update = false
@@ -67,7 +42,6 @@ Vagrant.configure(2) do |config|
   end
 
   # TODO: These packages will be installed by ansible after the machine has booted
-  #    apt-get install -y ruby ruby-dev sqlite3 libsqlite3-dev ruby-bundler
   #    gem install prepd
 
   # Add OS and pip packages for Ansible
@@ -79,6 +53,8 @@ Vagrant.configure(2) do |config|
       easy_install pip
       pip install -U setuptools cryptography markupsafe
       pip install -U ansible boto
+      echo "Installing Ruby..."
+      apt-get install -y ruby ruby-dev sqlite3 libsqlite3-dev ruby-bundler
     SHELL
   end
 
@@ -102,7 +78,7 @@ Vagrant.configure(2) do |config|
     autostart = forward_ports = i.eql?(0)
     config.vm.define "node#{i}", autostart: autostart do |node|
       node.vm.provider :virtualbox do |v|
-        v.name = "node#{i}.#{machine_domain}.local"
+        v.name = "node#{i}.#{domain}.#{tld}"
       end
 
       # NFS directory mounts
@@ -114,11 +90,11 @@ Vagrant.configure(2) do |config|
       end
 
       # Networking
-      node.vm.hostname = "node#{i}.#{machine_domain}.local"
+      node.vm.hostname = "node#{i}.#{domain}.#{tld}"
       node.vm.network 'private_network', type: :dhcp, nic_type: 'virtio'
 
       if Vagrant.has_plugin?('vagrant-hostmanager')
-        node.hostmanager.aliases = ["node#{i}.local"]
+        # node.hostmanager.aliases = ["node#{i}.local"]
         node.hostmanager.ip_resolver = proc do |vm, resolving_vm|
           if hostname = (vm.ssh_info && vm.ssh_info[:host])
             `vagrant ssh node#{i} -c "/sbin/ip addr show #{ssh_intf} | grep 'inet '"`.split[1].split('/')[0]

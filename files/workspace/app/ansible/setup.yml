@@ -1,0 +1,16 @@
+#!/usr/bin/env ansible-playbook
+---
+- hosts: x-localhost
+  tasks:
+    - include_role:
+        name: prepd/setup
+        tasks_from: ansible-patch
+
+
+- hosts: localhost
+  tasks:
+    # Configures a machine with custom tools for the developer using the developer's setup.yml
+    # Tools common for all developers using a machine are installed using the machines's setup.yml
+    # Tools common for a specific project are installed using the project's setup.yml
+    - include_role:
+        name: prepd/setup

@@ -4,21 +4,21 @@ require 'active_record'
 require 'sqlite3'
 
 module Prepd
-  DEV_DIR = "#{Dir.home}/prepd-dev".freeze
-  PROD_DIR = Dir.home.freeze
+  # DEV_DIR = "#{Dir.home}/prepd-dev".freeze
+  # PROD_DIR = Dir.home.freeze
 
-  def self.base_dir
-    @base_dir ||= cli_options.development.eql?('true') ? (cli_options.delete_field('directory') || DEV_DIR) : PROD_DIR
-  end
+  # def self.base_dir
+  #   @base_dir ||= cli_options.development.eql?('true') ? (cli_options.delete_field('directory') || DEV_DIR) : PROD_DIR
+  # end
 
-  def self.config_dir; "#{base_dir}/.prepd"; end
+  def self.config_dir; "#{Dir.home}/.prepd"; end
 
   def self.config_file; "#{config_dir}/config"; end
 
   def self.default_config
     {
       'version' => '1',
-      'prepd_dir' => "#{base_dir}/prepd",
+      # 'prepd_dir' => "#{base_dir}/prepd",
     }
   end
 
@@ -46,6 +46,10 @@ module Prepd
 
   def self.log(message)
     STDOUT.puts(message)
+  end
+
+  def self.files_dir
+    "#{Pathname.new(File.dirname(__FILE__)).parent}/files"
   end
 
   # Probe system for whether it is virutal or not and default accordingly

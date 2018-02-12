@@ -1,35 +1,76 @@
 module Prepd
-  class Developer < Base
+  class Workspace < Base
     REPOSITORY_VERSION = '0.1.1'.freeze
     REPOSITORY_NAME = 'prepd'.freeze
+    ANSIBLE_ROLES_PATH = "#{Dir.home}/.ansible/roles".freeze
+    ANSIBLE_ROLES = {'prepd-roles' => 'prepd', 'terraplate' => 'terraplate', 'terraplate-components' => 'terraplate-components' }.freeze
 
     # attr_accessor :tf_creds, :tf_key, :tf_secret, :ansible_creds, :ansible_key, :ansible_secret
-    # TODO: Rename prepd repo to prepd-docs
-    # Commit everything ot prepd-developer and push
-    # Change repo name to prepd
+    # Steps
+    # create a machine
+    # boot the machine
+    # run ~/prepd/app/ansible/setup.yml
+    #
+    # Issues
+    # - database needs to be shared between VMs and the host
+    # - second patch to ansible 2.4.3.0 is failing
+    # - prepd/setup/tasks/main.yml just includes vars from prepd_dir/app/ansible/setup/vars.yml
+    # - dev machine frank keeps provisioning everytime it boots. why?
+    #
     # TODO:
-    # In dev mode the directories are ~/prepd-dev/.prepd and ~/prepd-dev/prepd
+    # - change --dev to more like 'workspaces' where each workspace has a set of machines, projects, etc
+    # one or more of the workspaces may be used for prepd development. That is not of consequence
+    # Then the host's ~/.prepd/config is still applicable to all workspaces
+    # Maybe it's like this:
+    # ~/prepd/workspaces/default # this is mounted in each machine as ~/prepd
+    # ~/.prepd/config stores the most recent workspace which is what prepd-gem uses for things like prepd ssh
+    # ~/prepd/shared  # this is where prepd-gem and other projects shared between all workspaces go
+    # OR maybe all it needs is to change the option from --dev to --workspace and require a param when using
+    #
+    # - make shared repos, e.g. prepd-gem, rails-templates, etc availalbe to all VMs regardless of prod/dev
+    # put dev dir inside ~/.prepd/host on the host
+    # always mount the host's ~/.prepd/host dir in the VMs as ~/host
+    #
+    # - be able to change the name of the VM by changing the parent directory
+    # Change the Vagrantfile to get the name of the enclosing directory as the name
+    # serialize the record id to prepd-machine.yml
+    # when running vagrant up it calls prepd update <record_id> <name>
 
     before_create :check_count
-    after_create :setup_host
+    after_create :setup_space
 
     def check_count
-      throw :abort if self.class.count > 0
+      return if self.class.count.zero?
+      self.class.first.delete and return if config.force
+      errors.add(:create, host: 'record exists use --force to override')
+      throw :abort
     end
 
-    def setup_host
-      binding.pry
-      # setup_git  # clone prepd repo to ~/.prepd
-      # create_password_file
-      # clone_dependencies
-      '1'
+    def setup_space
+      FileUtils.mkdir_p(config.prepd_dir) unless Dir.exists? config.prepd_dir
+      Dir.chdir(config.prepd_dir) { clone_repository }
+      clone_dependencies
+      create_password_file
+    end
+
+    #
+    # Clone Ansible roles
+    #
+    def clone_dependencies
+      FileUtils.mkdir_p(ANSIBLE_ROLES_PATH) unless Dir.exists? ANSIBLE_ROLES_PATH
+      Dir.chdir(ANSIBLE_ROLES_PATH) do
+        ANSIBLE_ROLES.each do |key, value|
+          next if Dir.exists? "#{ANSIBLE_ROLES_PATH}/#{value}"
+          system("git clone #{git_log} git@github.com:rjayroach/#{key} #{value}")
+        end
+      end
     end
 
     def create_password_file
       password_dir = "#{config_dir}/vault-keys"
       password_file = "#{password_dir}/password.txt"
       return if File.exists?(password_file)
-      FileUtils.mkdir_p(password_dir)
+      FileUtils.mkdir_p(password_dir) unless Dir.exists? password_dir
       write_password_file(password_file)
     end
 
@@ -37,51 +78,8 @@ module Prepd
       "#{config.prepd_dir}/config/developer"
     end
 
-    #
-    # Clone prepd-roles, terraplate and terraplate-components
-    #
-    def clone_dependencies
-      log = config.verbose ? '' : '--quiet'
-      ansible_roles_path = "#{Dir.home}/.ansible/roles"
-      FileUtils.mkdir_p(ansible_roles_path)
-      Dir.chdir(ansible_roles_path) do
-        dependencies.each do |key, value|
-          system("git clone #{log} git@github.com:rjayroach/#{key} #{value}") unless Dir.exists?("#{ansible_roles_path}/#{value}")
-        end
-      end
-    end
-
-    def dependencies
-      {'prepd-roles' => 'prepd', 'terraplate' => 'terraplate', 'terraplate-components' => 'terraplate-components' }
-    end
 
 
-
-    ### Developer utilty methods
-    def prepd_developer_config
-      @prepd_developer_config ||= (
-        if File.exists?(prepd_developer_config_path)
-          YAML.load_file(prepd_developer_config_path)['prepd_developer']
-        else
-          {}
-        end
-      )
-    end
-
-    def write_prepd_developer_config
-      FileUtils.mkdir_p(prepd_developer_path) unless Dir.exists?(prepd_developer_path)
-      File.open(prepd_developer_config_path, 'w') do |f|
-        f.write({ 'prepd_developer' => prepd_developer_config.to_yaml })
-      end
-    end
-
-    def prepd_developer_config_path
-      "#{prepd_developer_path}/prepd-developer.yml"
-    end
-
-    def prepd_developer_path
-      "#{config.prepd_dir}/config/developer"
-    end
     #############
     #
     # Initialize the prepd-project or just copy in developer credentials if the project already exists

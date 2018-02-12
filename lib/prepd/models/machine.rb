@@ -21,7 +21,7 @@ module Prepd
     end
 
     def vagrantfile_template
-      File.read(File.join(File.dirname(__FILE__), VAGRANTFILE))
+      File.read("#{Prepd.files_dir}/machine/#{VAGRANTFILE}")
     end
 
     #

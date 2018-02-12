@@ -3,6 +3,7 @@ require 'prepd'
 require 'prepd/cli/options_parser'
 require 'prepd/cli/commands'
 require 'ostruct'
+require 'prepd/workspace'
 
 module Prepd
   # Parse any command line arguments
@@ -10,22 +11,22 @@ module Prepd
 
   # Load the default config, override with config file valuse and finally override with any command line options
   Prepd.config = OpenStruct.new(base_config.merge(cli_options.to_h))
+  config.command = ARGV[0] ? ARGV.shift.to_sym : :cli
+  config.config_dir = config_dir
 
   # Set the config.development? and config.production? values
+  # TODO: When in workspace/project, see about setting mode based on the git repo. if it is prepd then it is in dev mode
   development_mode = (config.development && config.delete_field('development').eql?('true')) ? true : false
   config.send('production?=', !development_mode)
   config.send('development?=', development_mode)
 
+  # Prepare the workspace or ignore if --dev flag was passed
+  Workspace.new(config).prepare
+
   # Set config values based on machine probe, defaults, config file and cli arguments
   config.machine_type = machine_is_host? ? :host : :vm
   config.create_type ||= machine_is_host? ? :machine : :project
-  config.config_dir = config_dir
-  config.command = ARGV[0] ? ARGV.shift.to_sym : :cli
 
-  # Prepare the database
-  ActiveRecord::Base.logger = Logger.new(File.open("#{config.config_dir}/database.log", 'w'))
-  ActiveRecord::Base.establish_connection(adapter: :sqlite3, database: "#{config.config_dir}/sqlite.db")
-  require 'prepd/models/schema'
 
   # Process the command or invoke the console
   if config.command.eql?(:cli)

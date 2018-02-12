@@ -7,9 +7,12 @@ module Prepd::Cli
       optparse = OptionParser.new do |opts|
         opts.banner = "Usage:\n  prepd new AAP_PATH [options]\n\nOptions:"
 
-        opts.on( '--dev [DIRECTORY]', '# Setup the application with development repositories' ) do |value|
+        opts.on( '--dev', '# Setup the application with development repositories' ) do |value|
           options.development = 'true'
-          options.directory = value
+        end
+
+        opts.on( '--force', '# Force operation even if it will cause errors' ) do |value|
+          options.force = true
         end
 
         opts.on('-h', '--help', '# Display this screen') do

@@ -1,29 +1,26 @@
 ActiveRecord::Schema.define do
-  unless ActiveRecord::Base.connection.data_sources.include?('developers')
-    create_table :developers do |table|
-      table.column :name, :string
-    end
-  end
-
   unless ActiveRecord::Base.connection.data_sources.include?('machines')
-    create_table :machines do |table|
-      # table.column :developer_id, :integer # foreign key <table-name-singular>_id
-      table.column :name, :string
-      table.column :projects_dir, :string
+    create_table :machines do |t|
+      # t.column :developer_id, :integer # foreign key <table-name-singular>_id
+      t.column :name, :string
+      t.column :projects_dir, :string
+      t.timestamps
     end
   end
 
   unless ActiveRecord::Base.connection.data_sources.include?('machine_projects')
-    create_table :machine_projects do |table|
-      table.column :machine_id, :integer # foreign key <table-name-singular>_id
-      table.column :project_id, :integer # foreign key <table-name-singular>_id
+    create_table :machine_projects do |t|
+      t.column :machine_id, :integer # foreign key <table-name-singular>_id
+      t.column :project_id, :integer # foreign key <table-name-singular>_id
+      t.timestamps
     end
   end
 
   unless ActiveRecord::Base.connection.data_sources.include?('projects')
-    create_table :projects do |table|
-      table.column :name, :string
-      table.column :repo_url, :string
+    create_table :projects do |t|
+      t.column :name, :string
+      t.column :repo_url, :string
+      t.timestamps
     end
   end
 end

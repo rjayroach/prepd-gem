@@ -47,22 +47,5 @@ module Prepd
     #     end
     #   end
     # end
-
-    # prepd_machine:
-    #   name: c2p4
-    #   projects_dir: ~/projects
-    #   projects:
-    #     hashapp: { prepd_project: ‘devops’, repo_url: ‘git@github:maxcole/blah’ }
-    # def to_project_hash
-    #   prepd_machine_config['name'] ||= name
-    #   prepd_machine_config['projects_dir'] = projects_dir
-    #   prepd_machine_config['projects'] = projects
-    # end
-
-    # def project_hash
-    #   prepd_machine_config['name'] ||= config.app_name
-    #   prepd_machine_config['projects_dir'] ||= '~/projects'
-    #   prepd_machine_config['projects'] ||= {}
-    # end
   end
 end

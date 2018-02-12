@@ -1,0 +1,16 @@
+# NOTE: Custom values for the developer's machines
+# TODO:
+# move the machine hash to the machine's vars/setup.yml
+# shell and aliases_file are properties of the developer so put them under a 'developer' hash key
+---
+machine_time_zone: 'Asia/Singapore'
+machine_shell: zsh
+machine_aliases_file: '{{ ansible_env.HOME }}/.zsh.after/aliases.zsh'
+machine_projects_dir: '{{ ansible_env.HOME }}/dev'
+
+machine:
+  time_zone: 'Asia/Singapore'
+  shell: zsh
+  aliases_file: '{{ ansible_env.HOME }}/.zsh.after/aliases.zsh'
+
+machine_env: '{{ machine }}'
