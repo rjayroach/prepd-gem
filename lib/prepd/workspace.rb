@@ -15,16 +15,20 @@ module Prepd
       elsif in_workspace?
         config.prepd_dir = workspace_root.to_s
         prepare_database unless config.no_op
+      elsif config.create_type.eql?(:project)
+        config.prepd_dir = "#{Dir.home}/prepd"
+        config.work_dir = Dir.pwd
+        prepare_database
       else
-        make_workspace
+        create_workspace
       end
     end
 
-    def make_workspace
+    def create_workspace
       check_params
-      create_workspace
+      copy_workspace_files
       clone_dependencies
-      create_password_file
+      Prepd.create_password_file(config_dir)
       create_developer_vars
       exit 0
     end
@@ -39,7 +43,7 @@ module Prepd
 
     # Create the project directory, clone the prepd repo and make the .db directory
     # TODO: Switch to using Base git clone somehow
-    def create_workspace
+    def copy_workspace_files
       FileUtils.mkdir_p(config.prepd_dir)
       Dir.chdir(config.prepd_dir) do
         FileUtils.cp_r("#{Prepd.files_dir}/workspace/.", '.')
@@ -66,29 +70,12 @@ module Prepd
       Dir.chdir(ANSIBLE_ROLES_PATH) do
         ANSIBLE_ROLES.each do |key, value|
           next if Dir.exists? "#{ANSIBLE_ROLES_PATH}/#{value}"
-          system("git clone #{git_log} git@github.com:rjayroach/#{key} #{value}")
+          system("git clone #{Prepd.git_log} git@github.com:rjayroach/#{key} #{value}")
         end
       end
     end
 
-    def create_password_file
-      password_dir = "#{config_dir}/vault-keys"
-      password_file = "#{password_dir}/password.txt"
-      return if File.exists?(password_file)
-      FileUtils.mkdir_p(password_dir) unless Dir.exists? password_dir
-      write_password_file(password_file)
-    end
-
-    # TODO: There is idntical code in Base. DRY that up
-    #
-    # Generate the key to encrypt ansible-vault files
-    #
-    def write_password_file(file_name = 'password.txt')
-      require 'securerandom'
-      File.open(file_name, 'w') { |f| f.puts(SecureRandom.uuid) }
-      nil
-    end
-
+    # TODO: Use YAML to load/write the file
     def create_developer_vars
       vars_dir = "#{config_dir}/vars"
       # FileUtils.mkdir_p(vars_dir) unless Dir.exists? vars_dir

@@ -28,7 +28,7 @@ module Prepd
     # Destory the VM
     #
     def destroy_vm
-      yes = options.yes ? ' --yes' : ''
+      yes = config.yes ? ' --force' : ''
       processed = nil
       Dir.chdir(config_dir) { processed = system("vagrant destroy#{yes}") }
       # TODO: If the vagrant destory is canceled then immediately return from this method
@@ -36,6 +36,16 @@ module Prepd
         errors.add(:destroy, vm: 'error destroying virutal machine')
         throw :abort
       end
+    end
+
+    def up
+      processed, response = nil
+      Dir.chdir(config_dir) do
+        processed = system("vagrant up")
+        subdomain, x, y, domain = Dir.pwd.split('/').reverse[0..3]
+        response = "ssh node0.#{subdomain}.#{domain}.local"
+      end
+      response
     end
 
     def config_dir

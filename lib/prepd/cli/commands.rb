@@ -1,6 +1,6 @@
 module Prepd
   def self.commands
-    %i(ls new show rm)  # methods(false) - %i(commands)
+    %i(ls new show up rm)  # methods(false) - %i(commands)
   end
 
   def self.ls
@@ -20,10 +20,16 @@ module Prepd
     YAML.load(obj.to_yaml)
   end
 
+  def self.up(name = nil)
+    name ||= ARGV[0] || Dir.pwd.split('/').last
+    return unless obj = klass.find_by(name: name)
+    obj.up
+  end
+
   def self.rm(name = nil)
     name ||= ARGV[0] || Dir.pwd.split('/').last
     return unless obj = klass.find_by(name: name)
-    obj.destroy
+    obj.destroy ? nil : obj.errors.full_messages.join('. ')
   end
 
   def self.klass

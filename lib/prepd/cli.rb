@@ -20,12 +20,12 @@ module Prepd
   config.send('production?=', !development_mode)
   config.send('development?=', development_mode)
 
-  # Prepare the workspace or ignore if --dev flag was passed
-  Workspace.new(config).prepare
-
   # Set config values based on machine probe, defaults, config file and cli arguments
   config.machine_type = machine_is_host? ? :host : :vm
   config.create_type ||= machine_is_host? ? :machine : :project
+
+  # Prepare the workspace or ignore if --dev flag was passed
+  Workspace.new(config).prepare
 
 
   # Process the command or invoke the console
