@@ -24,7 +24,7 @@ module Prepd
       # end
       in_component_root('projects') do
         FileUtils.mkdir_p(name)
-        Dir.chdir(name) { FileUtils.touch('provision.yml') }
+        File.open("#{name}/provision.yml", 'w') { |f| f.write("---\n- hosts: all\n  tasks:\n") }
       end
       in_component_root('data') do
         FileUtils.mkdir_p(name)

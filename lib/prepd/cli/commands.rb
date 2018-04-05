@@ -1,3 +1,5 @@
+require 'prepd/models'
+
 module Prepd
   class Command
     def self.config; Prepd.config; end

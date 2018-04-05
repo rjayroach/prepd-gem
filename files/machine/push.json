@@ -1,0 +1,56 @@
+{
+  "variables": {
+    "aws_profile": "{{env `AWS_PROFILE`}}",
+    "vm_base_name": "{{env `VM_BASE_NAME`}}",
+    "vm_name": "{{env `VM_BASE_NAME`}}-{{env `VM_OUTPUT`}}",
+    "vm_input": "{{env `VM_INPUT`}}",
+    "vm_output": "{{env `VM_OUTPUT`}}",
+    "box_version": "{{env `BOX_VERSION`}}",
+    "s3_bucket": "{{env `S3_BUCKET`}}",
+    "s3_region": "{{env `S3_REGION`}}",
+    "s3_box_dir": "{{ env `S3_BOX_DIR`}}"
+  },
+
+  "builders": [
+    {
+      "guest_additions_mode": "disable",
+      "headless": true,
+      "output_directory": "images_cache/{{user `vm_output`}}",
+      "shutdown_command": "echo 'halt -p' > shutdown.sh; echo 'vagrant'|sudo -S sh 'shutdown.sh'",
+      "source_path": "images/{{user `vm_input`}}/{{user `vm_base_name`}}-{{user `vm_input`}}.ovf",
+      "ssh_username": "vagrant",
+      "ssh_password": "vagrant",
+      "ssh_wait_timeout": "30s",
+      "type": "virtualbox-ovf",
+      "vm_name": "{{user `vm_name`}}"
+    }
+  ],
+
+  "post-processors": [
+    [
+      {
+        "keep_input_artifact": true,
+        "output": "{{user `s3_box_dir`}}/{{user `vm_name`}}.box",
+        "type": "vagrant"
+      },
+      {
+        "type":     "vagrant-s3",
+        "box_dir":  "{{user `s3_box_dir`}}",
+        "box_name": "{{user `vm_name`}}",
+        "bucket":   "{{user `s3_bucket`}}",
+        "manifest": "{{user `vm_name`}}.json",
+        "profile": "{{user `aws_profile`}}",
+        "region": "{{user `s3_region`}}",
+        "version":  "{{ user `box_version` }}"
+      },
+      {
+        "type": "shell-local",
+        "inline": [
+          "rm -rf images/{{user `vm_input`}}",
+          "mv images_cache/{{user `vm_input`}} images",
+          "rmdir images_cache"
+        ]
+      }
+    ]
+  ]
+}

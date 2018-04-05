@@ -1,0 +1,101 @@
+{
+  "variables": {
+    "box_version": "{{env `BOX_VERSION`}}",
+    "core": "1",
+    "disk_size": "20240",
+    "iso_url": "{{env `ISO_URL`}}",
+    "iso_checksum": "{{env `ISO_CHECKSUM`}}",
+    "memory": "1024",
+    "playbook_file": "{{env `PLAYBOOK_FILE`}}",
+    "ssh_port": "22",
+    "ssh_wait_timeout": "10000s",
+    "vm_name": "{{env `VM_BASE_NAME`}}-{{env `VM_OUTPUT`}}",
+    "vm_output": "{{env `VM_OUTPUT`}}"
+  },
+
+  "builders": [
+    {
+      "type": "virtualbox-iso",
+      "boot_command": [
+        "<esc><wait>",
+        "install ",
+        "preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg ",
+        "debian-installer=en_US ",
+        "auto ",
+        "locale=en_US ",
+        "kbd-chooser/method=us ",
+        "netcfg/get_hostname={{ .Name }} ",
+        "netcfg/get_domain=vagrantup.com ",
+        "fb=false ",
+        "debconf/frontend=noninteractive ",
+        "console-setup/ask_detect=false ",
+        "console-keymaps-at/keymap=us ",
+        "keyboard-configuration/xkb-keymap=us ",
+        "<enter><wait>"
+      ],
+      "disk_size": "{{user `disk_size`}}",
+      "guest_os_type": "Debian_64",
+      "headless": true,
+      "http_directory": ".",
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "iso_checksum_type": "md5",
+      "iso_url": "{{user `iso_url`}}",
+      "output_directory": "images/{{user `vm_output`}}",
+      "shutdown_command": "echo 'halt -p' > shutdown.sh; echo 'vagrant'|sudo -S sh 'shutdown.sh'",
+      "ssh_password": "vagrant",
+      "ssh_username": "vagrant",
+      "ssh_port": "{{user `ssh_port`}}",
+      "ssh_wait_timeout": "{{user `ssh_wait_timeout`}}",
+      "vboxmanage": [
+        ["modifyvm", "{{.Name}}", "--memory", "{{user `memory`}}"],
+        ["modifyvm", "{{.Name}}", "--cpus", "{{user `core`}}"]
+      ],
+      "vm_name": "{{user `vm_name`}}"
+    }
+  ],
+
+  "provisioners": [
+    {
+      "type": "shell",
+      "execute_command": "echo 'vagrant' | {{ .Vars }} sudo -E -S sh '{{ .Path }}'",
+      "inline": [
+         "mkdir -p /home/vagrant/.ssh",
+         "chmod 0700 /home/vagrant/.ssh",
+         "wget --no-check-certificate https://raw.github.com/mitchellh/vagrant/master/keys/vagrant.pub -O /home/vagrant/.ssh/authorized_keys",
+         "chmod 0600 /home/vagrant/.ssh/authorized_keys",
+         "chown -R vagrant /home/vagrant/.ssh",
+         "echo '%sudo    ALL=(ALL)  NOPASSWD:ALL' >> /etc/sudoers"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "sleep 3",
+        "echo 'yes' | sudo m-a prepare",
+        "sudo mkdir /tmp/vboxguest",
+        "sudo mount -t iso9660 -o loop /home/vagrant/VBoxGuestAdditions.iso /tmp/vboxguest",
+        "cd /tmp/vboxguest",
+        "sudo ./VBoxLinuxAdditions.run",
+        "cd /tmp",
+        "sudo umount /tmp/vboxguest",
+        "sudo rmdir /tmp/vboxguest",
+        "rm /home/vagrant/VBoxGuestAdditions.iso",
+        "echo Image Provisioned!"
+      ]
+    },
+    {
+      "type": "ansible",
+      "groups": [ "{{user `vm_output`}}" ],
+      "playbook_file": "{{user `playbook_file`}}",
+      "user" : "vagrant"
+    }
+  ],
+
+  "post-processors": [
+    {
+      "type": "vagrant",
+      "keep_input_artifact": true,
+      "output": "boxes/{{user `vm_name`}}.box"
+    }
+  ]
+}

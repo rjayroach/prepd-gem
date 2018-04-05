@@ -1,0 +1,17 @@
+# included as prepd_machine by prepd/machine role
+---
+dirs:
+  data: '{{ ansible_env.HOME }}/data'
+  developer: '{{ ansible_env.HOME }}/developer'
+  machine: '{{ ansible_env.HOME }}/machine'
+  projects: '{{ ansible_env.HOME }}/projects'
+  share: '{{ ansible_env.HOME }}/share'
+
+dns:
+  name: "{{ hostname.stdout.split('.')[1] }}"
+  domainname: "{{ hostname.stdout.split('.')[-2:] | join('.') }}"
+
+cluster:
+  ssh: n1
+  host: "node1.{{ hostname.stdout.split('.')[-2:] | join('.') }}"
+  registry_port: 30005

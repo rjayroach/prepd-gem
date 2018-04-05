@@ -1,0 +1,9 @@
+# Custom roles for the developer
+---
+- hosts: developer-base
+  tasks:
+    - include_role:
+        name: prepd/yadr
+
+    - include_role:
+        name: prepd/tmuxinator

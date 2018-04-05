@@ -1,0 +1,54 @@
+# Applies to this specific cluster
+---
+# Every machine will have these values applied. They can be overridden in the machine's definition
+defaults:
+  domain: <%= settings['name'] %>.local
+  mounts:
+    data: # project data mount (sub directories for each project group, e.g. hashapp)
+      host: <%= settings['workspace'] %>/data/<%= settings['projects_name'] %>
+      guest: /home/vagrant/data
+    clusters: # location of prepd.yml
+      host: <%= settings['workspace'] %>/clusters
+      guest: /home/vagrant/clusters
+      provisioners:
+        - provision.yml
+    roles: # ansible roles mount
+      host: <%= Dir.home %>/.ansible/roles
+      guest: /usr/share/ansible/roles
+    share: # prepd shared projects mount (e.g. playbooks, rails-templates, etc.)
+      host: <%= Dir.home %>/.prepd/share
+      guest: /home/vagrant/share
+      # provisioners:
+      #   - playbooks/provision/vagrant.yml
+
+machines:
+  node0:
+    hardware:
+      cpus: 1
+      memory: 1024
+    vm:
+      autostart: true
+      box: <%= (boxes['development'] || {})['box'] %>
+      box_url: <%= (boxes['development'] || {})['box_url'] %>
+    mounts:
+      developer:
+        host: <%= settings['workspace'] %>/developer
+        guest: /home/vagrant/developer
+        provisioners:
+          # - <%= settings['name'] %>/provision.yml
+          - clusters/provision.yml
+      projects: # project code mount (sub directories for each project group, e.g. hashapp)
+        host: <%= settings['workspace'] %>/projects/<%= settings['projects_name'] %>
+        guest: /home/vagrant/projects
+        provisioners:
+          - provision.yml
+    ssh:
+      interface: enp0s8
+    ansible_groups: ['development'] # , 'kubectl', 'docker']
+  node1:
+    vm:
+      box: <%= (boxes['minikube'] || {})['box'] %>
+      box_url: <%= (boxes['minikube'] || {})['box_url'] %>
+    ssh:
+      interface: enp0s8
+    ansible_groups: ['minikube']

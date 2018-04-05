@@ -1,0 +1,60 @@
+{
+  "variables": {
+    "box_namespace": "{{env `BOX_NAMESPACE`}}",
+    "box_version": "{{env `BOX_VERSION`}}",
+    "playbook_file": "{{env `PLAYBOOK_FILE`}}",
+    "vm_base_name": "{{env `VM_BASE_NAME`}}",
+    "vm_name": "{{env `VM_BASE_NAME`}}-{{env `VM_OUTPUT`}}",
+    "vm_input": "{{env `VM_INPUT`}}",
+    "vm_output": "{{env `VM_OUTPUT`}}",
+    "json_rb_file": "{{env `JSON_RB_FILE`}}"
+  },
+
+  "builders": [
+    {
+      "type": "virtualbox-ovf",
+      "guest_additions_mode": "disable",
+      "headless": true,
+      "output_directory": "images_cache/{{user `vm_output`}}",
+      "shutdown_command": "echo 'halt -p' > shutdown.sh; echo 'vagrant'|sudo -S sh 'shutdown.sh'",
+      "source_path": "images/{{user `vm_input`}}/{{user `vm_base_name`}}-{{user `vm_input`}}.ovf",
+      "ssh_username": "vagrant",
+      "ssh_password": "vagrant",
+      "ssh_wait_timeout": "30s",
+      "vm_name": "{{user `vm_name`}}"
+    }
+  ],
+
+  "provisioners": [
+    {
+      "type": "ansible",
+      "groups": [ "{{user `vm_output`}}" ],
+      "playbook_file": "{{user `playbook_file`}}",
+      "user" : "vagrant"
+    }
+  ],
+
+  "post-processors": [
+    [
+      {
+        "type": "vagrant",
+        "keep_input_artifact": true,
+        "output": "boxes/{{user `vm_name`}}.box"
+      },
+      {
+        "type": "shell-local",
+        "inline": [
+          "rm -rf images/{{user `vm_input`}}",
+          "mv images_cache/{{user `vm_input`}} images",
+          "rmdir images_cache"
+        ]
+      },
+      {
+        "type": "shell-local",
+        "inline": [
+          "{{user `json_rb_file`}} {{user `box_namespace`}} {{user `vm_name`}} {{user `box_version`}}"
+        ]
+      }
+    ]
+  ]
+}

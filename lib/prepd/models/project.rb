@@ -1,15 +1,18 @@
 module Prepd
   class Project < Base
     WORK_DIR = 'projects'
+    REPOSITORY_VERSION = '0.1.1'.freeze
+    REPOSITORY_NAME = 'prepd-project'.freeze
+
     include Prepd::Component
+    # If production? then remove the .git directory in order to start with a clean repository
+    # If development? then clone the master branch and return
   end
 end
 
 =begin
 module Prepd
   class Project < Base
-    REPOSITORY_VERSION = '0.1.1'.freeze
-    REPOSITORY_NAME = 'prepd-project'.freeze
 
     has_many :machine_projects
     has_many :machines, through: :machine_projects
@@ -27,8 +30,6 @@ module Prepd
     end
 
     #
-    # If production? then remove the .git directory in order to start with a clean repository
-    # If development? then clone the master branch and return
     # TODO: project's ansible.cfg needs a custom path to vault_password_file
     # TODO: dir hierarchy for new projects:
     # ~/projects/hashapp/apps/devops/app/ansible

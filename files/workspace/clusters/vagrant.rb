@@ -100,7 +100,7 @@ end
 
 # Testing
 unless defined? PREPD_VAGRANT
-  m = Prepd::Vagrant::Machine.new('node1')
+  m = Prepd::Vagrant::Machine.new('node0')
   require 'pry'
   binding.pry
 end

@@ -1,0 +1,64 @@
+#!/usr/bin/env ansible-playbook
+# vagrant machine provisioner (based on host's ansible.groups values set in Vagrantfile)
+---
+# TODO: move terraform/terragrunt binary installation can be moved to packer.
+- hosts: kubectl:!minikube
+  # NOTE: These vars need to be accessible to the project, e.g. utils.yml -e@utils/build.yml needs the cluster_host and local_registry_port in order to tag the image to push it
+  # This should go into the machine's prepd.yml config file which also has directory locations. Anything that is a machine wide configuration goes here
+  # This would include machine's timezone, docker daemon config, perhaps PG installation and so on. The project could still configure this stuff, but doesn't have to
+  # vars:
+  #   cluster_host: node1
+  #   cluster_ssh: n1
+  #   local_registry_port: 30005
+
+  tasks:
+    - include_role:
+        name: prepd/machine
+
+    - name: Insert aliases
+      include_role:
+        name: prepd/aliases
+      vars:
+        aliases_marker: host-ssh
+        aliases_block: |
+          {{ prepd_machine.cluster.ssh }}() { ssh {{ prepd_machine.cluster.host }} $@ }
+
+    - name: Use scp to copy minikube credentials from cluster
+      include_role:
+        name: prepd/k8s/kubectl
+        tasks_from: remote
+      vars:
+        k8s_kubectl_cluster_host: '{{ prepd_machine.cluster.host }}'
+
+    # TODO: This isn't working right now for some reason
+    - name: Initialize helm
+      command: helm init
+
+    - name: Install local registry in local cluster
+      command: 'helm install stable/docker-registry --name local-registry --set service.type=NodePort,service.nodePort={{ prepd_machine.cluster.registry_port }}'
+
+    # TODO: create this task in docker role and have it restart docker
+    - name: Configure docker to allow push to insecure registry running in local cluster
+      include_role:
+        name: prepd/docker
+        tasks_from: insecure-registry
+      vars:
+        registry: '{{ prepd_machine.cluster.host }}:{{ prepd_machine.cluster.registry_port }}'
+
+- hosts: minikube
+  tasks:
+    - command: 'minikube status |grep minikube'
+      register: mks
+      ignore_errors: yes
+      changed_when: false
+
+    - set_fact:
+        minikube_running: "{{ mks.stdout_lines[0].split(' ')[-1] == 'Running' }}"
+
+    - include_role:
+        name: prepd/k8s/minikube
+        tasks_from: start
+      vars:
+        # The physical interface enp0s8 is specific to this hardware setup
+        minikube_spoof_intf: ansible_enp0s8
+      when: not minikube_running

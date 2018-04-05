@@ -1,38 +1,12 @@
-# Mount the host_directory => VM directory
-# NOTE: NFS exports cannot be nested; If there is an error, make sure that the attempted mounts here
-# are not subdirectories of an already NFS mounted directory in the directory tree
-mount_paths = {
-  "#{Pathname.new(Dir.pwd).parent.parent.parent}" => '/home/vagrant/prepd',
-  "#{Dir.home}/.prepd/share" => '/usr/share/prepd',
-  "#{Dir.home}/.ansible/roles" => '/usr/share/ansible/roles'
-}
+PREPD_VAGRANT = true
+require_relative '../vagrant.rb'
+prepd_config = Prepd::Vagrant::Config.new
 
-# The virtual machine's interface to connect to via ssh
-ssh_intf = 'eth1'
-
-# The number of machines in the cluster (in addition to node0)
-cluster_node_count = 3
-
-# The ports to open between the VM and the host
-port_forwards = [
-  2375,  # docker
-  2376,  # docker
-  3000,  # rails
-  4200,  # ember
-  7357,
-  # 35729, # reload
-  49152  # livereload
-]
-
-if %w(up provision).include?(ARGV[0]); end
+# Run custom code depending on values of the vagrant action and host
+operation, host = ARGV
+if %w(up).include?(operation); end
 
 Vagrant.configure(2) do |config|
-  subdomain, x, y, domain = Dir.pwd.split('/').reverse[0..3]
-  tld = 'local'
-
-  config.vm.box = 'debian/contrib-stretch64'
-  config.vm.box_check_update = false
-
   # Add user's ssh key to vagrant vm
   config.vm.provision :shell do |shell|
     ssh_pub_key = File.readlines("#{Dir.home}/.ssh/id_rsa.pub").first.strip
@@ -42,30 +16,87 @@ Vagrant.configure(2) do |config|
     SHELL
   end
 
-  # TODO: These packages will be installed by ansible after the machine has booted
-  #    gem install prepd
-
-  # Add OS and pip packages for Ansible
-  config.vm.provision :shell do |shell|
-    shell.inline = <<-SHELL
-      echo "Installing Ansible..."
-      apt-get update
-      apt-get install -y apt-transport-https libssl-dev libffi-dev python-dev build-essential python-setuptools git
-      easy_install pip
-      pip install -U setuptools cryptography markupsafe
-      pip install -U ansible boto
-      echo "Installing Ruby..."
-      apt-get install -y ruby ruby-dev sqlite3 libsqlite3-dev ruby-bundler
-    SHELL
-  end
-
   config.ssh.forward_agent = true
 
   config.vm.provider :virtualbox do |v|
-    v.memory = 2048
-    v.cpus = 1
+    # v.memory = 2048
+    # v.cpus = 1
     v.customize ['guestproperty', 'set', :id, '/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold', 10000 ]
     v.customize ['modifyvm', :id, '--nictype1', 'virtio']
+    # v.customize ['modifyvm', :id, '--nic1', 'hostonly', '--nic2', 'nat']
+
+		host = RbConfig::CONFIG["host_os"]
+		if host =~ /darwin/ # OS X
+			# sysctl returns bytes, convert to MB
+      # allocate 1/8 (12.5%) of available physical memory to the VM
+			v.memory = `sysctl -n hw.memsize`.to_i / 1024 / 1024 / 8
+			v.cpus = 1 # `sysctl -n hw.physicalcpu`.to_i
+		elsif host =~ /linux/ # Linux
+      # TODO: Linux host not tested
+			# meminfo returns kilobytes, convert to MB
+			v.memory = `grep 'MemTotal' /proc/meminfo | sed -e 's/MemTotal://' -e 's/ kB//'`.to_i / 1024 / 8
+			v.cpus = `nproc`.to_i
+		end
+  end
+
+  prepd_config.machines.each do |key|
+    machine = Prepd::Vagrant::Machine.new(key)
+    STDOUT.puts "#{'^' * 100}\n#{machine.config}\n#{'^' * 100}" if ARGV.include? '--debug'
+
+    config.vm.define key, autostart: machine.autostart do |node|
+      node.vm.provider :virtualbox do |v|
+        v.name = machine.host_name
+      end
+
+      node.vm.box = machine.vm_box
+      node.vm.box_url = machine.vm_box_url
+
+      # NFS directory mounts
+			# NOTE: NFS exports cannot be nested; If there is an error, make sure that the attempted mounts here
+			# are not subdirectories of an already NFS mounted directory in the directory tree
+      node.vm.synced_folder '.', '/vagrant', disabled: true
+      machine.mounts.each do |key, mount_path|
+        FileUtils.mkdir_p(mount_path['host'])
+        node.vm.synced_folder mount_path['host'], mount_path['guest'], type: 'nfs',
+          mount_options: ['rw', 'vers=3', 'tcp'],
+          linux__nfs_options: ['rw', 'no_subtree_check', 'all_squash', 'async']
+      end
+
+      # Networking
+      node.vm.hostname = machine.host_name
+      node.vm.network :private_network, type: :dhcp, nic_type: 'virtio'
+
+      # Port Forwarding on vagrant interface
+      machine.port_forwards.each do |key, forward|
+        node.vm.network 'forwarded_port', host: forward['host'], guest: forward['guest'], auto_correct: forward['auto_correct'] || true
+      end
+
+      if Vagrant.has_plugin?('vagrant-hostmanager')
+        # node.hostmanager.aliases = ["node#{i}.local"]
+        node.hostmanager.ip_resolver = proc do |vm, resolving_vm|
+          if hostname = (vm.ssh_info && vm.ssh_info[:host])
+            if_name = machine.ssh_interface
+            `vagrant ssh #{key} -c "/sbin/ip addr show #{if_name} | grep 'inet '"`.split[1].split('/')[0]
+          end
+        end
+      end
+
+      # Provision playbook each mount path
+      ansible_groups = machine.ansible_groups.each_with_object({}) { |group, hash| hash[group] = key }
+      machine.mounts.select { |key, mount| mount.include? 'provisioners' }.each do |mount_key, mount|
+        vault_password_file = mount['guest'] + (mount['vault_password_file'] || 'vault-password.txt')
+        mount['provisioners'].each do |file|
+          config.vm.provision 'ansible_local' do |ansible|
+            ansible.compatibility_mode = '2.0'
+            ansible.groups = ansible_groups
+            ansible.playbook = file
+            ansible.provisioning_path = mount['guest']
+            ansible.vault_password_file = vault_password_file if File.exists?(vault_password_file)
+            ansible.verbose = false # '-vvv'
+          end
+        end
+      end
+    end
   end
 
   if Vagrant.has_plugin?('vagrant-hostmanager')
@@ -73,40 +104,6 @@ Vagrant.configure(2) do |config|
     config.hostmanager.manage_host = true
     config.hostmanager.manage_guest = true
     config.hostmanager.ignore_private_ip = false
-  end
-
-  (0..(cluster_node_count + 1)).each do |i|
-    autostart = forward_ports = i.eql?(0)
-    config.vm.define "node#{i}", autostart: autostart do |node|
-      node.vm.provider :virtualbox do |v|
-        v.name = "node#{i}.#{subdomain}.#{domain}.#{tld}"
-      end
-
-      # NFS directory mounts
-      node.vm.synced_folder '.', '/vagrant', disabled: true
-      mount_paths.each do |host_path, machine_path|
-        node.vm.synced_folder host_path, machine_path, type: 'nfs',
-          mount_options: ['rw', 'vers=3', 'tcp'],
-          linux__nfs_options: ['rw', 'no_subtree_check', 'all_squash', 'async']
-      end
-
-      # Networking
-      node.vm.hostname = "node#{i}.#{subdomain}.#{domain}.#{tld}"
-      node.vm.network 'private_network', type: :dhcp, nic_type: 'virtio'
-
-      if Vagrant.has_plugin?('vagrant-hostmanager')
-        # node.hostmanager.aliases = ["node#{i}.local"]
-        node.hostmanager.ip_resolver = proc do |vm, resolving_vm|
-          if hostname = (vm.ssh_info && vm.ssh_info[:host])
-            `vagrant ssh node#{i} -c "/sbin/ip addr show #{ssh_intf} | grep 'inet '"`.split[1].split('/')[0]
-          end
-        end
-      end
-
-      port_forwards.each do |port|
-        node.vm.network 'forwarded_port', guest: port, host: port, auto_correct: true
-      end if forward_ports
-    end
   end
 
   if Vagrant.has_plugin?('vagrant-cachier')

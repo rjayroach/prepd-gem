@@ -1,0 +1,9 @@
+---
+- hosts: development
+  tasks:
+    - name: Include vars
+      include_vars:
+        file: vars.yml
+
+    - include_role:
+        name: prepd/yadr

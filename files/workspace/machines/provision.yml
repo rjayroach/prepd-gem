@@ -1,0 +1,36 @@
+---
+- hosts: base
+  tasks:
+    - include_role:
+        name: prepd/packer/base-provision
+    - include_role:
+        name: prepd/ansible
+
+- hosts: development
+  tasks:
+    - include_role:
+        name: prepd/ruby
+    - include_role:
+        name: prepd/docker
+    - name: Install kubectl
+      include_role:
+        name: prepd/k8s/kubectl
+    - name: Install helm
+      include_role:
+        name: prepd/k8s/helm
+
+- hosts: minikube
+  tasks:
+    - include_role:
+        name: prepd/docker
+    - include_role:
+        name: prepd/k8s/kubectl
+    - include_role:
+        name: prepd/k8s/minikube
+      vars:
+        # See: https://github.com/kubernetes/minikube/issues/2549
+        k8s_minikube_bin_url: https://storage.googleapis.com/minikube-builds/2550/minikube-linux-amd64
+    - include_role:
+        name: prepd/k8s/minikube
+        tasks_from: start
+    - command: minikube delete
