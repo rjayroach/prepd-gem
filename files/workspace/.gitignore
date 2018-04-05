@@ -1,9 +1,0 @@
-# Ignore always:
-config/**/vault-keys/
-config/**/data/
-
-# Ignore in development:
-config/machines
-config/projects
-lib/*
-.db/*

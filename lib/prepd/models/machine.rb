@@ -1,212 +1,145 @@
+require 'yaml'
+require 'erb'
+require 'json'
+
 module Prepd
   class Machine < Base
-    VAGRANTFILE = 'Vagrantfile'.freeze
-    NAME = %x(hostname -f).split('.')[1].freeze
+    WORK_DIR = 'machines'
+    USER_CONFIG_FILE = 'build.yml'
+    VALID_BUMP_NAMES = %w(major minor patch)
 
-    has_many :machine_projects
-    has_many :projects, through: :machine_projects
+    include Prepd::Component
 
-    after_save :write_vagrantfile, :write_config
-    before_destroy :destroy_vm, :delete_config_dir
+    attr_accessor :bump
 
-    validates :name, presence: true, uniqueness: true  # "You must supply APP_PATH" unless name
+    before_validation :set_defaults
 
-    def self.ref
-      find_by(name: NAME)
+    validates :bump, inclusion: { in: VALID_BUMP_NAMES, message: "must be one of #{VALID_BUMP_NAMES.join(', ')}" }
+    validate :name_included_in_yaml
+
+    after_create :perform
+
+    def set_defaults
+      self.bump ||= Prepd.config.bump || 'patch'
     end
 
-    def write_vagrantfile
-      FileUtils.mkdir_p(config_dir) unless Dir.exists?(config_dir)
-      File.open("#{config_dir}/#{VAGRANTFILE}", 'w') { |f| f.write(ERB.new(vagrantfile_template).result(binding)) }
+    def name_included_in_yaml
+      return if valid_build_names.include? name
+      errors.add(:invalid_name, "valid names are #{valid_build_names.join(', ')}")
     end
 
-    def vagrantfile_template
-      File.read("#{Prepd.files_dir}/machine/#{VAGRANTFILE}")
+    def valid_build_names
+      yml['images'].keys
     end
 
-    #
-    # Destory the VM
-    #
-    def destroy_vm
-      yes = config.yes ? ' --force' : ''
-      processed = nil
-      Dir.chdir(config_dir) { processed = system("vagrant destroy#{yes}") }
-      # TODO: If the vagrant destory is canceled then immediately return from this method
-      unless processed
-        errors.add(:destroy, vm: 'error destroying virutal machine')
-        throw :abort
-      end
-    end
-
-    def up
-      processed, response = nil
-      Dir.chdir(config_dir) do
-        processed = system("vagrant up")
-        subdomain, x, y, domain = Dir.pwd.split('/').reverse[0..3]
-        response = "ssh node0.#{subdomain}.#{domain}.local"
-      end
-      response
-    end
-
-    def config_dir
-      "#{config.prepd_dir}/config/machines/#{name}"
-    end
-
-    # as_json with projects array included
-    def for_yaml
-      as_json.merge({ 'projects' => projects.as_json })
-    end
-
-
-    # attr_accessor :tf_creds, :tf_key, :tf_secret, :ansible_creds, :ansible_key, :ansible_secret
-    #
-    # Copy developer credentials or create them if the file doesn't already exists
-    # TODO: Maybe the creation of developer creds should be done at startup of prepd
-    #
-    def copy_developer_yml
-      return if File.exists?("#{path}/.developer.yml")
-      Dir.chdir(path) do
-        if File.exists?("#{Prepd.config_dir}/developer.yml")
-          FileUtils.cp("#{Prepd.config_dir}/developer.yml", '.developer.yml')
-        elsif File.exists?("#{Dir.home}/.prepd-developer.yml")
-          FileUtils.cp("#{Dir.home}/.prepd-developer.yml", '.developer.yml')
-        else
-          File.open('.developer.yml', 'w') do |f|
-            f.puts('---')
-            f.puts("git_username: #{`git config --get user.name`.chomp}")
-            f.puts("git_email: #{`git config --get user.email`.chomp}")
-            f.puts("docker_username: ")
-            f.puts("docker_password: ")
-          end
-        end
+    def yml
+      return @yml if @yml
+      in_component_root do
+        @yml = YAML.load(ERB.new(File.read("#{workspace_root}/prepd-workspace.yml")).result(binding)).merge(
+          YAML.load(ERB.new(File.read("#{component_root}/#{USER_CONFIG_FILE}")).result(binding)))
       end
     end
 
     #
-    # Create AWS credential files for Terraform and Ansible, ssh keys and and ansible-vault encryption key
-    # NOTE: The path to credentials is used in the ansible-role prepd
+    # Execute the builder
     #
-    def generate_credentials
-      # self.tf_creds = '/Users/rjayroach/Documents/c2p4/aws/legos-terraform.csv'
-      # self.ansible_creds = '/Users/rjayroach/Documents/c2p4/aws/legos-ansible.csv'
-      generate_tf_creds
-      generate_ansible_creds
-      generate_ssh_keys
-      generate_vault_password
-    end
-
-    def generate_tf_creds
-      self.tf_key, self.tf_secret = CSV.read(tf_creds).last.slice(2,2) if tf_creds
-      unless tf_key and tf_secret
-        STDOUT.puts 'tf_key and tf_secret need to be set (or set tf_creds to path to CSV file)'
-        return
-      end
-      require 'csv'
-      Dir.chdir(path) do
-        File.open('.terraform-vars.txt', 'w') do |f|
-          f.puts("aws_access_key_id = \"#{tf_key}\"")
-          f.puts("aws_secret_access_key = \"#{tf_secret}\"")
-        end
+    def perform
+      # return "#{build_action}\n#{build_env}" if Prepd.config.no_op
+      in_component_root do
+        # binding.pry
+        # FileUtils.cp("#{Prepd.files_dir}/machine/#{os_env['base_dir']}/preseed.cfg", '.')
+        system(build_env, "packer build #{action_file}")
+        # FileUtils.rm('preseed.cfg')
       end
     end
 
-    def generate_ansible_creds
-      self.ansible_key, self.ansible_secret = CSV.read(ansible_creds).last.slice(2,2) if ansible_creds
-      unless ansible_key and ansible_secret
-        STDOUT.puts 'ansible_key and ansible_secret need to be set (or set ansible_creds to path to CSV file)'
-        return
+    def action_file
+      return "#{Prepd.files_dir}/machine/#{build_action}.json" unless build_action.eql?(:iso)
+      "#{Prepd.files_dir}/machine/#{os_env['base_dir']}/iso.json"
+    end
+
+    def build
+      yml['images'][name]
+    end
+
+    # Get references to current build, the os build and the os env
+    def os_build
+      os_build = build
+      loop do
+        break if os_build['source'].has_key?('os_image')
+        os_build = yml['images'][os_build['source']['image']]
       end
-      Dir.chdir(path) do
-        File.open('.boto', 'w') do |f|
-          f.puts('[Credentials]')
-          f.puts("aws_access_key_id = #{ansible_key}")
-          f.puts("aws_secret_access_key = #{ansible_secret}")
-        end
-      end
+      os_build
+    end
+
+    def os_env
+      yml['os_images'][os_build['source']['os_image']]
     end
 
     #
-    # Generate a key pair to be used as the EC2 key pair
+    # Derive values for image and box
     #
-    def generate_ssh_keys(file_name = '.id_rsa')
-      Dir.chdir(path) { system("ssh-keygen -b 2048 -t rsa -f #{file_name} -q -N '' -C 'ansible@#{name}.#{client.name}.local'") }
-    end
-
-    #
-    # Generate the key to encrypt ansible-vault files
-    #
-    def generate_vault_password(file_name = '.vault-password.txt')
-      require 'securerandom'
-      Dir.chdir(path) { File.open(file_name, 'w') { |f| f.puts(SecureRandom.uuid) } }
-    end
+    def base_dir; os_env['base_dir'] end
+    # def build_image_dir; "#{yml['name']}/images/#{name}" end
+    def build_image_dir; "images/#{name}" end
+    def build_image_name; "#{os_env['base_name']}-#{name}" end
+    # def build_box_dir; "#{Dir.pwd}/#{yml['name']}/boxes" end
+    def build_box_dir; "#{Dir.pwd}/boxes" end
+    def box_json_file; "#{build_box_dir}/#{build_image_name}.json" end
 
     #
-    # Use ansible-vault to encrypt the inventory group_vars
+    # Caclulate the packer builder to run: :iso, :build, :rebuild or :push
     #
-    def encrypt_vault_files
-      Dir.chdir("#{path}/ansible") do
-        %w(all development local production staging).each do |env|
-          system("ansible-vault encrypt inventory/group_vars/#{env}/vault")
-        end
-      end
+    def build_action
+      return :push if Prepd.config.push
+      return :rebuild if File.exists?("#{build_image_dir}/#{build_image_name}-disk1.vmdk")
+      build['source'].has_key?('os_image') ? :iso : :build
     end
 
-    def encrypt(mode = :vault)
-      return unless executable?('gpg')
-      Dir.chdir(path) do
-        system "tar cf #{archive(:credentials)} #{file_list(mode)}"
-      end
-      system "gpg -c #{archive(:credentials)}"
-      FileUtils.rm(archive(:credentials))
-      "File created: #{archive(:credentials)}.gpg"
+    #
+    # Setup env vars for the builder
+    #
+    def build_env
+      xbuild_env = {
+        'VM_BASE_NAME' => os_env['base_name'],
+        'VM_INPUT' => build_action.eql?(:build) ? build['source']['image'] : name,
+        'VM_OUTPUT' => name,
+        'BOX_NAMESPACE' => yml['name'],
+        'BOX_VERSION' => box_version,
+        'PLAYBOOK_FILE' => build['provisioner'],
+        'JSON_RB_FILE' => "#{Prepd.files_dir}/machine/json.rb"
+      }
+
+      xbuild_env.merge!({
+        'ISO_CHECKSUM' => os_env['iso_checksum'],
+        'ISO_URL' => os_env['iso_url']
+      }) if build_action.eql?(:iso)
+
+      xbuild_env.merge!({
+        'AWS_PROFILE' => yml['aws']['profile'],
+        'S3_BUCKET' => yml['aws']['s3_bucket'],
+        'S3_REGION' => yml['aws']['s3_region'],
+        'S3_BOX_DIR' => "#{yml['aws']['box_dir']}/#{yml['namesapce']}"
+      }) if build_action.eql?(:push)
+      xbuild_env
     end
 
-    def encrypt_data
-      return unless executable?('gpg')
-      archive_path = "#{path}/#{client.name}-#{name}-data.tar"
-      Dir.chdir(path) do
-        system "tar cf #{archive_path} data"
-      end
-      system "gpg -c #{archive_path}"
-      FileUtils.rm(archive_path)
-      FileUtils.mv("#{archive_path}.gpg", "#{archive(:data)}.gpg")
-      "File created: #{archive(:data)}.gpg"
+    # Calculate the next box version
+    def box_version
+      return '0.0.1' unless File.exists?(box_json_file)
+      json = JSON.parse(File.read(box_json_file))
+      current_version = json['versions'].first['version']
+      return current_version if build_action.eql?(:push)
+      inc(current_version, type: bump)
     end
 
-    def decrypt(type = :credentials)
-      return unless %i(credentials data).include? type
-      return unless executable?('gpg')
-      unless File.exists?("#{archive(type)}.gpg")
-        STDOUT.puts "File not found: #{archive(type)}.gpg"
-        return
-      end
-      system "gpg #{archive(type)}.gpg"
-      Dir.chdir(path) do
-        system "tar xf #{archive(type)}"
-      end
-      FileUtils.rm(archive(type))
-      "File processed: #{archive(type)}.gpg"
-    end
-
-    def executable?(name = 'gpg')
-      require 'mkmf'
-      rv = find_executable(name)
-      STDOUT.puts "#{name} executable not found" unless rv
-      FileUtils.rm('mkmf.log')
-      rv
-    end
-
-    def file_list(mode)
-      return ".boto .id_rsa .id_rsa.pub .terraform-vars.txt .vault-password.txt" if mode.eql?(:all)
-      ".vault-password.txt"
-    end
-
-    def archive(type = :credentials)
-      "#{data_path}/#{client.name}-#{name}-#{type}.tar"
-    end
-
-    def data_path
-      "#{path}/data"
+    def inc(version, type: 'patch')
+      idx = { 'major' => 0, 'minor' => 1, 'patch' => 2 }
+      ver = version.split('.')
+      ver[idx['patch']] = 0 if %w(major minor).include? type
+      ver[idx['minor']] = 0 if %w(major).include? type
+      ver[idx[type]] = ver[idx[type]].to_i + 1
+      ver.join('.')
     end
   end
 end

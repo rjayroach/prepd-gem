@@ -1,137 +1,106 @@
 module Prepd
-  class Developer < Base
-    WORK_DIR = 'developer'
+  class Cluster < Base
+    WORK_DIR = 'clusters'
     include Prepd::Component
+
+    after_create :create_cluster, :initialize_cluster
+
+    def create_cluster
+      in_component_root do
+        FileUtils.rm_rf(name) if Prepd.config.force
+        FileUtils.mkdir_p(name)
+      end
+    end
+
+    def initialize_cluster
+      in_component_dir do
+        FileUtils.cp_r("#{Prepd.files_dir}/cluster/.", '.')
+      end
+      # in_component_root('developer') do
+      #   FileUtils.mkdir_p(name)
+      #   Dir.chdir(name) do
+      #     FileUtils.cp_r("#{Prepd.files_dir}/developer/cluster/.", '.')
+      #   end
+      # end
+      in_component_root('projects') do
+        FileUtils.mkdir_p(name)
+        Dir.chdir(name) { FileUtils.touch('provision.yml') }
+      end
+      in_component_root('data') do
+        FileUtils.mkdir_p(name)
+        Dir.chdir(name) { FileUtils.touch('.keep') }
+      end
+    end
+
+    def up
+      in_component_dir { vagrant up }
+    end
   end
 end
 
 =begin
-    # attr_accessor :name
-
-    def initialize_workspace
-      in_workspace_root do
-        FileUtils.mkdir(WORK_DIR)
-        FileUtils.chdir(WORK_DIR) do
-          # TODO: copy over common playbook
-          Prepd.write_password_file('vault-password.txt')
-        end
-      end
-    end
-
-    # def requested_dir
-    #   "#{workspace_dir}/#{WORK_DIR}/#{name}"
-    # end
-
-    def on_create(type)
-      case type
-      when 'cluster'
-        FileUtils.rm_rf(requested_dir) if Prepd.config.force
-        FileUtils.mkdir_p(requested_dir)
-        in_workspace_root("#{WORK_DIR}/#{name}") do
-          FileUtils.cp_r(Dir.glob("#{files_dir}/#{type}/*"), '.')
-          # TODO: copy playbook file
-        end
-      end
-    end
-
+require 'erb'
 module Prepd
-  class Workspace < Base
-    REPOSITORY_VERSION = '0.1.1'.freeze
-    REPOSITORY_NAME = 'prepd'.freeze
-    ANSIBLE_ROLES_PATH = "#{Dir.home}/.ansible/roles".freeze
-    ANSIBLE_ROLES = {'prepd-roles' => 'prepd', 'terraplate' => 'terraplate', 'terraplate-components' => 'terraplate-components' }.freeze
+  class Machine < Base
+    VAGRANTFILE = 'Vagrantfile'.freeze
+    NAME = %x(hostname -f).split('.')[1].freeze
 
-    # attr_accessor :tf_creds, :tf_key, :tf_secret, :ansible_creds, :ansible_key, :ansible_secret
-    # Steps
-    # create a machine
-    # boot the machine
-    # run ~/prepd/app/ansible/setup.yml
-    #
-    # Issues
-    # - database needs to be shared between VMs and the host
-    # - second patch to ansible 2.4.3.0 is failing
-    # - prepd/setup/tasks/main.yml just includes vars from prepd_dir/app/ansible/setup/vars.yml
-    # - dev machine frank keeps provisioning everytime it boots. why?
-    #
-    # TODO:
-    # - change --dev to more like 'workspaces' where each workspace has a set of machines, projects, etc
-    # one or more of the workspaces may be used for prepd development. That is not of consequence
-    # Then the host's ~/.prepd/config is still applicable to all workspaces
-    # Maybe it's like this:
-    # ~/prepd/workspaces/default # this is mounted in each machine as ~/prepd
-    # ~/.prepd/config stores the most recent workspace which is what prepd-gem uses for things like prepd ssh
-    # ~/prepd/shared  # this is where prepd-gem and other projects shared between all workspaces go
-    # OR maybe all it needs is to change the option from --dev to --workspace and require a param when using
-    #
-    # - make shared repos, e.g. prepd-gem, rails-templates, etc availalbe to all VMs regardless of prod/dev
-    # put dev dir inside ~/.prepd/host on the host
-    # always mount the host's ~/.prepd/host dir in the VMs as ~/host
-    #
-    # - be able to change the name of the VM by changing the parent directory
-    # Change the Vagrantfile to get the name of the enclosing directory as the name
-    # serialize the record id to prepd-machine.yml
-    # when running vagrant up it calls prepd update <record_id> <name>
+    has_many :machine_projects
+    has_many :projects, through: :machine_projects
 
-    before_create :check_count
-    after_create :setup_space
+    after_save :write_vagrantfile, :write_config
+    before_destroy :destroy_vm, :delete_config_dir
 
-    def check_count
-      return if self.class.count.zero?
-      self.class.first.delete and return if config.force
-      errors.add(:create, host: 'record exists use --force to override')
-      throw :abort
+    validates :name, presence: true, uniqueness: true  # "You must supply APP_PATH" unless name
+
+    def self.ref
+      find_by(name: NAME)
     end
 
-    def setup_space
-      FileUtils.mkdir_p(config.prepd_dir) unless Dir.exists? config.prepd_dir
-      Dir.chdir(config.prepd_dir) { clone_repository }
-      clone_dependencies
-      create_password_file
+    def write_vagrantfile
+      FileUtils.mkdir_p(config_dir) unless Dir.exists?(config_dir)
+      File.open("#{config_dir}/#{VAGRANTFILE}", 'w') { |f| f.write(ERB.new(vagrantfile_template).result(binding)) }
+    end
+
+    def vagrantfile_template
+      File.read("#{Prepd.files_dir}/machine/#{VAGRANTFILE}")
     end
 
     #
-    # Clone Ansible roles
+    # Destory the VM
     #
-    def clone_dependencies
-      FileUtils.mkdir_p(ANSIBLE_ROLES_PATH) unless Dir.exists? ANSIBLE_ROLES_PATH
-      Dir.chdir(ANSIBLE_ROLES_PATH) do
-        ANSIBLE_ROLES.each do |key, value|
-          next if Dir.exists? "#{ANSIBLE_ROLES_PATH}/#{value}"
-          system("git clone #{git_log} git@github.com:rjayroach/#{key} #{value}")
-        end
+    def destroy_vm
+      yes = config.yes ? ' --force' : ''
+      processed = nil
+      Dir.chdir(config_dir) { processed = system("vagrant destroy#{yes}") }
+      # TODO: If the vagrant destory is canceled then immediately return from this method
+      unless processed
+        errors.add(:destroy, vm: 'error destroying virutal machine')
+        throw :abort
       end
     end
 
-    def create_password_file
-      password_dir = "#{config_dir}/vault-keys"
-      password_file = "#{password_dir}/password.txt"
-      return if File.exists?(password_file)
-      FileUtils.mkdir_p(password_dir) unless Dir.exists? password_dir
-      write_password_file(password_file)
+    def up
+      processed, response = nil
+      Dir.chdir(config_dir) do
+        processed = system("vagrant up")
+        subdomain, x, y, domain = Dir.pwd.split('/').reverse[0..3]
+        response = "ssh node0.#{subdomain}.#{domain}.local"
+      end
+      response
     end
 
     def config_dir
-      "#{config.prepd_dir}/config/developer"
+      "#{config.prepd_dir}/config/machines/#{name}"
+    end
+
+    # as_json with projects array included
+    def for_yaml
+      as_json.merge({ 'projects' => projects.as_json })
     end
 
 
-
-    #############
-    #
-    # Initialize the prepd-project or just copy in developer credentials if the project already exists
-    #
-    def create_project
-      if Dir.exists?(path)
-        copy_developer_yml
-        return
-      end
-      setup_git
-      clone_submodules
-      copy_developer_yml
-      generate_credentials
-      encrypt_vault_files
-    end
-
+    # attr_accessor :tf_creds, :tf_key, :tf_secret, :ansible_creds, :ansible_key, :ansible_secret
     #
     # Copy developer credentials or create them if the file doesn't already exists
     # TODO: Maybe the creation of developer creds should be done at startup of prepd
@@ -203,6 +172,14 @@ module Prepd
     #
     def generate_ssh_keys(file_name = '.id_rsa')
       Dir.chdir(path) { system("ssh-keygen -b 2048 -t rsa -f #{file_name} -q -N '' -C 'ansible@#{name}.#{client.name}.local'") }
+    end
+
+    #
+    # Generate the key to encrypt ansible-vault files
+    #
+    def generate_vault_password(file_name = '.vault-password.txt')
+      require 'securerandom'
+      Dir.chdir(path) { File.open(file_name, 'w') { |f| f.puts(SecureRandom.uuid) } }
     end
 
     #

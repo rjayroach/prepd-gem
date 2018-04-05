@@ -1,9 +1,7 @@
 require 'pry'
-require 'prepd'
+require 'ostruct'
 require 'prepd/cli/options_parser'
 require 'prepd/cli/commands'
-require 'ostruct'
-require 'prepd/workspace'
 
 module Prepd
   # Parse any command line arguments
@@ -11,30 +9,22 @@ module Prepd
 
   # Load the default config, override with config file valuse and finally override with any command line options
   Prepd.config = OpenStruct.new(base_config.merge(cli_options.to_h))
-  config.command = ARGV[0] ? ARGV.shift.to_sym : :cli
-  config.config_dir = config_dir
+  config.command = StringInquirer.new(ARGV[0] ? ARGV.shift : 'cli')
+  # config.config_dir = config_dir
 
-  # Set the config.development? and config.production? values
-  # TODO: When in workspace/project, see about setting mode based on the git repo. if it is prepd then it is in dev mode
-  development_mode = (config.development && config.delete_field('development').eql?('true')) ? true : false
-  config.send('production?=', !development_mode)
-  config.send('development?=', development_mode)
+  config.env = StringInquirer.new(Prepd.cli_options.env || 'production' )
+  config.working_dir ||= Dir.pwd
 
   # Set config values based on machine probe, defaults, config file and cli arguments
-  config.machine_type = machine_is_host? ? :host : :vm
-  config.create_type ||= machine_is_host? ? :machine : :project
-
-  # Prepare the workspace or ignore if --dev flag was passed
-  Workspace.new(config).prepare
-
+  config.machine_type = StringInquirer.new(machine_is_host? ? 'host' : 'vm')
 
   # Process the command or invoke the console
-  if config.command.eql?(:cli)
-    Pry.start(Prepd, prompt: [proc { 'prepd> '}])
-  elsif commands.include?(config.command)
-    STDOUT.puts(Prepd.send(config.command))
+  if config.command.cli?
+    Pry.start(Prepd::Command, prompt: [proc { 'prepd> '}])
+  elsif Command.methods(false).include?(config.command.to_sym)
+    STDOUT.puts(Command.send(config.command))
   else
     # TODO: show the 'runtime' help
-    STDOUT.puts("#{config.command} - No such command")
+    STDOUT.puts("#{config.command} - No such command. Valid commands are #{Command.methods(false).join(', ')}")
   end
 end

@@ -1,5 +1,13 @@
 module Prepd
   class Project < Base
+    WORK_DIR = 'projects'
+    include Prepd::Component
+  end
+end
+
+=begin
+module Prepd
+  class Project < Base
     REPOSITORY_VERSION = '0.1.1'.freeze
     REPOSITORY_NAME = 'prepd-project'.freeze
 
@@ -82,3 +90,4 @@ module Prepd
     # end
   end
 end
+=end

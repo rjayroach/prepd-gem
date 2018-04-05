@@ -1,6 +1,0 @@
-# Custom roles for the developer
----
-- include_role:
-    name: prepd/yadr-x
-- include_role:
-    name: prepd/tmuxinator

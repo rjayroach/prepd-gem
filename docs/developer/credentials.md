@@ -23,6 +23,17 @@ credentials
 └── keys
 ```
 
+
+```bash
+credentials_aws:
+  terraform: { aws_access_key_id: 'ABC', aws_secret_access_key: 'XYZ' }
+  ansible: { aws_access_key_id: 'LMN', aws_secret_access_key: 'OPQ' }
+credentials_docker:
+  quay_repo: { registry: quay.io, username: user@abuser.com, password: pass }
+```
+
+
+
 ### New Project
 
 When creating a new project you can follow these steps:

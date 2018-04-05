@@ -7,8 +7,20 @@ module Prepd::Cli
       optparse = OptionParser.new do |opts|
         opts.banner = "Usage:\n  prepd new AAP_PATH [options]\n\nOptions:"
 
+        opts.on( '--bump=LEVEL', '# Setup the application with development repositories' ) do |value|
+          options.bump = value
+        end
+
+        opts.on( '--push', '# Push the box to remote S3 bucket' ) do
+          options.push = true
+        end
+
         opts.on( '--dev', '# Setup the application with development repositories' ) do |value|
-          options.development = 'true'
+          options.env = 'development'
+        end
+
+        opts.on( '--dir=DIR', '# Set the working directory' ) do |value|
+          options.working_dir = value
         end
 
         opts.on( '--force', '# Force operation even if it will cause errors' ) do |value|

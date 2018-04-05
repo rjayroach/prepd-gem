@@ -1,3 +1,78 @@
+module Prepd
+  class Base
+    include ActiveModel::Model
+    include ActiveModel::Validations::Callbacks
+    extend ActiveModel::Callbacks
+
+    define_model_callbacks :create
+
+		def create
+			run_callbacks :create do
+				# Your create action methods here
+			end
+		end
+  end
+  
+  module Component
+    extend ActiveSupport::Concern
+
+    included do
+      attr_accessor :name
+
+      validates :name, presence: true
+      validate :component_directory_does_not_exist
+    end
+
+    def component_directory_does_not_exist
+      return if Prepd.config.force
+      errors.add(:directory_exists, component_dir) if Dir.exists?(component_dir)
+    end
+
+    def in_component_dir
+      in_component_root do
+        Dir.chdir(name) { yield }
+      end
+    end
+
+    def component_dir
+      "#{component_root}/#{name}"
+    end
+
+    def in_component_root(dir = self.class::WORK_DIR)
+      in_workspace_root do
+        Dir.chdir(dir) { yield }
+      end
+    end
+
+    def component_root
+      "#{workspace_root}/#{self.class::WORK_DIR}"
+    end
+
+    def in_workspace_root
+      raise StandardError, 'Not a prepd workspace' if workspace_root.nil?
+      Dir.chdir(workspace_root) { yield }
+    end
+
+    def workspace_root
+      path = Pathname.new(Prepd.config.working_dir)
+      until path.root?
+        break path if File.exists?("#{path}/prepd-workspace.yml")
+        path = path.parent
+      end
+    end
+
+    def files_dir
+      "#{Prepd.files_dir}/#{self.class::WORK_DIR}"
+    end
+
+    def klass_name
+      binding.pry
+      "#{Prepd.files_dir}/#{self.class::WORK_DIR}"
+    end
+  end
+end
+
+=begin
 require 'yaml'
 require 'erb'
 
@@ -46,3 +121,4 @@ module Prepd
     end
   end
 end
+=end

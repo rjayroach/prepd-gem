@@ -1,9 +1,22 @@
 require 'dotenv'
 require 'fileutils'
 require 'active_record'
-require 'sqlite3'
 
 module Prepd
+  class StringInquirer < String
+    # Copied from ActiveSupport::StringInquirer
+    def method_missing(method_name, *arguments)
+      if method_name[-1] == '?'
+        self == method_name[0..-2]
+      else
+        super
+      end
+    end
+  end
+
+  def self.env; @env; end
+  def self.env=(env); @env = env; end
+
   def self.config_dir; "#{Dir.home}/.prepd"; end
 
   def self.config_file; "#{config_dir}/config"; end
