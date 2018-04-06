@@ -4,6 +4,6 @@
 /machines/*
 /data/*
 /projects/*
-!/machines/provision.yml
+!/machines/*.yml
 !/data/.keep
 !/projects/.keep

@@ -1,0 +1,34 @@
+---
+aws:
+  profile: vagrant-s3
+  s3_bucket: my-storage-bucket
+  s3_region: ap-southeast-1
+  box_dir: boxes
+
+os_images:
+  debian_stretch_amd64:
+    base_dir: debian/stretch
+    base_name: debian-stretch-amd64
+    iso_url: https://cdimage.debian.org/debian-cd/9.4.0/amd64/iso-cd/debian-9.4.0-amd64-xfce-CD-1.iso
+    iso_checksum: 6715c8c0bedf77c8eef2e8732e117db6
+
+images:
+  # 1) Start by creating a base image from the OS's official ISO and add ansible
+  base:
+    source:
+      os_image: debian_stretch_amd64
+    provisioner: <%= Dir.pwd %>/provision.yml
+  # 2) Customize the base image to the developer's requirements
+  developer-base:
+    source:
+      image: base
+    provisioner: <%= Pathname.new(Dir.pwd).parent.to_s %>/developer/machines/provision.yml
+  # 3) All additional images are derived from the developer's base image
+  development:
+    source:
+      image: developer-base
+    provisioner: <%= Dir.pwd %>/provision.yml
+  minikube:
+    source:
+      image: developer-base
+    provisioner: <%= Dir.pwd %>/provision.yml

@@ -1,0 +1,25 @@
+#!/usr/bin/env ansible-playbook
+# NOTE: run setup.yml with -K to prompt for sudo password
+---
+- hosts: localhost
+  vars_files:
+    - vars/setup.yml
+  roles:
+    - prepd/nginx
+
+# TODO: put the extra packages in vars/setup and let the role take care of it rather than defining
+# the extra packages in the role itself which means they can't be changed w/out applying to all machines
+
+# TODO: take care that the host could be a linux machine as well as a mac
+- hosts: x-localhost
+  roles:
+    - prepd/laptop
+    - prepd/common
+    - prepd/yadr
+    - prepd/developer
+    - prepd/extras
+    - prepd/vagrant
+    # - prepd/cordova
+    # - { role: kubernetes-client, kubernetes_cert_path: '{{ playbook_dir }}/../../data/kubernetes',
+    #     kubernetes_unit_path: '{{ playbook_dir }}/../../kubernetes' }
+    # - prepd/packer

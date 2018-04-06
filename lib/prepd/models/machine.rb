@@ -47,9 +47,10 @@ module Prepd
       # return "#{build_action}\n#{build_env}" if Prepd.config.no_op
       in_component_root do
         # binding.pry
-        # FileUtils.cp("#{Prepd.files_dir}/machine/#{os_env['base_dir']}/preseed.cfg", '.')
+        # TODO: remove the preseed copy when running packer command from the gem directory
+        FileUtils.cp("#{Prepd.files_dir}/machine/#{os_env['base_dir']}/preseed.cfg", '.')
         system(build_env, "packer build #{action_file}")
-        # FileUtils.rm('preseed.cfg')
+        FileUtils.rm('preseed.cfg')
       end
     end
 

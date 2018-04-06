@@ -28,7 +28,7 @@ module Prepd
         File.open('prepd-workspace.yml', 'w') { |f| f.write("---\nname: #{name}\n") }
         FileUtils.cp_r("#{Prepd.files_dir}/workspace/.", '.')
         Dir.chdir('developer') do
-          File.open('clusters/vars.yml', 'a') do |f|
+          File.open('clusters/vars.yml', 'w') do |f|
             f.puts("---\ngit_user:")
             f.puts("  name: #{`git config --get user.name`.chomp}")
             f.puts("  email: #{`git config --get user.email`.chomp}")
@@ -38,12 +38,12 @@ module Prepd
           system('ansible-vault encrypt clusters/credentials.yml')
         end
         # NOTE: remove after testing
-        Dir.chdir('machines') do
-          FileUtils.mkdir('packer_cache')
-          Dir.chdir('packer_cache') do
-            FileUtils.cp('/tmp/50e697ab8edda5b0ac5ba2482c07003d2ff037315c7910af66efd3c28d23ed51.iso', '.')
-          end
-        end
+        # Dir.chdir('machines') do
+        #   FileUtils.mkdir('packer_cache')
+        #   Dir.chdir('packer_cache') do
+        #     FileUtils.cp('/tmp/50e697ab8edda5b0ac5ba2482c07003d2ff037315c7910af66efd3c28d23ed51.iso', '.')
+        #   end
+        # end
       end
     end
   end

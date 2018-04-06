@@ -2,10 +2,10 @@
 
 ## Getting Started
 
+Create a VirtualBox cluster of machines managed by Vagrant:
+
 ```bash
-cd app/ansible
+prepd new cluster my-cluster
 ```
 
-Check out the README.md in that directory
-
-Additional documentation available at [prepd](https://github.com/rjayroach/prepd-docs/)
+Full documentation is available [here](https://github.com/rjayroach/prepd/tree/master/docs)

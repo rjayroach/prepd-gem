@@ -1,0 +1,7 @@
+---
+nginx_upstreams:
+  - { name: 'api_gateway', server: '172.28.128.6:3000' }
+  - { name: 'dashboard', server: '127.0.0.1:4200' }
+nginx_servers:
+  - { name: 'www.hashersworld.local', proxy_pass: 'http://api_gateway' }
+  - { name: 'live-cache.ding.dong', proxy_pass: 'http://api_gateway' }
