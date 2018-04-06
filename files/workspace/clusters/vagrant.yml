@@ -3,7 +3,7 @@
 ---
 settings:
   workspace: <%= Pathname.new(Dir.pwd).parent.parent %>
-  boxes_dir: <%= Pathname.new(Dir.pwd).parent %>/machines/boxes
+  boxes_dir: <%= Pathname.new(Dir.pwd).parent.parent %>/machines/boxes
   # boxes_dir: <%= Dir.home %>/.prepd/share/packer/debian/stretch/boxes
   # boxes_dir: https://s3-ap-southeast-1.amazonaws.com/c2p4-storage/boxes
   name: <%= Dir.pwd.split('/').last %>

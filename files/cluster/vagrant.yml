@@ -18,8 +18,6 @@ defaults:
     share: # prepd shared projects mount (e.g. playbooks, rails-templates, etc.)
       host: <%= Dir.home %>/.prepd/share
       guest: /home/vagrant/share
-      # provisioners:
-      #   - playbooks/provision/vagrant.yml
 
 machines:
   node0:
@@ -36,7 +34,7 @@ machines:
         guest: /home/vagrant/developer
         provisioners:
           # - <%= settings['name'] %>/provision.yml
-          - clusters/provision.yml
+          - provision.yml
       projects: # project code mount (sub directories for each project group, e.g. hashapp)
         host: <%= settings['workspace'] %>/projects/<%= settings['projects_name'] %>
         guest: /home/vagrant/projects
@@ -44,7 +42,7 @@ machines:
           - provision.yml
     ssh:
       interface: enp0s8
-    ansible_groups: ['development'] # , 'kubectl', 'docker']
+    ansible_groups: ['development']
   node1:
     vm:
       box: <%= (boxes['minikube'] || {})['box'] %>

@@ -1,0 +1,20 @@
+#!/usr/bin/env ansible-playbook
+---
+- hosts: development
+  tasks:
+    - include_role:
+        name: prepd/machine
+
+    - name: Include vars
+      include_vars:
+        file: vars.yml
+        name: projects
+
+    - include_role:
+        name: prepd/project/setup
+        tasks_from: clone
+      vars:
+        projects_dir: '{{ prepd_machine.dirs.projects }}'
+      with_dict: '{{ projects }}'
+      loop_control:
+        loop_var: project

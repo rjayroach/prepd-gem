@@ -28,14 +28,14 @@ module Prepd
         File.open('prepd-workspace.yml', 'w') { |f| f.write("---\nname: #{name}\n") }
         FileUtils.cp_r("#{Prepd.files_dir}/workspace/.", '.')
         Dir.chdir('developer') do
-          File.open('clusters/vars.yml', 'w') do |f|
+          File.open('vars.yml', 'w') do |f|
             f.puts("---\ngit_user:")
             f.puts("  name: #{`git config --get user.name`.chomp}")
             f.puts("  email: #{`git config --get user.email`.chomp}")
           end
           Prepd.write_password_file('vault-password.txt')
-          FileUtils.touch('clusters/credentials.yml')
-          system('ansible-vault encrypt clusters/credentials.yml')
+          FileUtils.touch('vault.yml')
+          system('ansible-vault encrypt vault.yml')
         end
         # NOTE: remove after testing
         # Dir.chdir('machines') do

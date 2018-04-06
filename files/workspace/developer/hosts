@@ -1,1 +1,7 @@
 node0 ansible_connection=local
+
+[development]
+node0
+
+[kubectl]
+node0

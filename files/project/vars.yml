@@ -1,0 +1,5 @@
+---
+example:
+  repo:
+    name: devops
+    url: git@github.com:rjayroach/prepd-project.git

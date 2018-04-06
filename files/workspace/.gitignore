@@ -1,9 +1,12 @@
 # See https://help.github.com/articles/ignoring-files for more about ignoring files.
 
 /developer/vault-password.txt
+
 /machines/*
-/data/*
-/projects/*
 !/machines/*.yml
+
+/projects/*
+!/projects/*.yml
+
+/data/*
 !/data/.keep
-!/projects/.keep

@@ -1,6 +1,13 @@
 #!/usr/bin/env ansible-playbook
 # vagrant machine provisioner (based on host's ansible.groups values set in Vagrantfile)
 ---
+- hosts: all
+  tasks:
+    - file:
+        path: '{{ ansible_env.HOME }}/{{ item }}'
+        state: absent
+      with_items: [shutdown.sh, yankring_history_v2.txt]
+
 # TODO: move terraform/terragrunt binary installation can be moved to packer.
 - hosts: kubectl:!minikube
   # NOTE: These vars need to be accessible to the project, e.g. utils.yml -e@utils/build.yml needs the cluster_host and local_registry_port in order to tag the image to push it
@@ -30,14 +37,16 @@
       vars:
         k8s_kubectl_cluster_host: '{{ prepd_machine.cluster.host }}'
 
-    # TODO: This isn't working right now for some reason
     - name: Initialize helm
       command: helm init
+
+    - name: Wait for tiller to be available
+      pause:
+        seconds: 30
 
     - name: Install local registry in local cluster
       command: 'helm install stable/docker-registry --name local-registry --set service.type=NodePort,service.nodePort={{ prepd_machine.cluster.registry_port }}'
 
-    # TODO: create this task in docker role and have it restart docker
     - name: Configure docker to allow push to insecure registry running in local cluster
       include_role:
         name: prepd/docker
