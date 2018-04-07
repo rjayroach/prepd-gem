@@ -26,6 +26,8 @@ module Prepd
     def initialize_workspace
       Dir.chdir(requested_dir) do
         File.open('prepd-workspace.yml', 'w') { |f| f.write("---\nname: #{name}\n") }
+        Prepd.config.workspaces << Dir.pwd
+        Prepd.write_config_file
         FileUtils.cp_r("#{Prepd.files_dir}/workspace/.", '.')
         Dir.chdir('developer') do
           File.open('vars.yml', 'w') do |f|

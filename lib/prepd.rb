@@ -1,4 +1,3 @@
-require 'dotenv'
 require 'fileutils'
 require 'active_record'
 
@@ -19,22 +18,33 @@ module Prepd
 
   def self.config_dir; "#{Dir.home}/.prepd"; end
 
-  def self.config_file; "#{config_dir}/config"; end
+  def self.config_file; "#{config_dir}/config.yml"; end
 
   def self.default_config
-    {
-      'version' => '1',
-    }
+    { version: 1 }
+  end
+
+  def self.verify_workspaces
+    config.workspaces ||= []
+    config.workspaces.each do |dir|
+      next if File.exists?(File.expand_path("#{dir}/prepd-workspace.yml"))
+      config.workspaces -= [dir]
+    end
+    write_config_file
   end
 
   def self.base_config
     write_config_file unless File.exists?(config_file)
-    default_config.merge(Dotenv.load(config_file))
+    default_config.merge(YAML.load(File.read(config_file)))
   end
 
   def self.write_config_file
     FileUtils.mkdir_p(config_dir) unless Dir.exists?(config_dir)
-    File.open(config_file, 'w') { |f| default_config.each { |key, value| f.puts("#{key}=#{value}") } }
+    File.open(config_file, 'w') { |f| f.write(YAML.dump(writable_config)) }
+  end
+
+  def self.writable_config
+    config.to_h.select { |k| %i(version workspaces).include?(k) }
   end
 
   def self.config=(config)

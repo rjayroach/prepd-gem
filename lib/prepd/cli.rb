@@ -17,6 +17,7 @@ module Prepd
 
   # Set config values based on machine probe, defaults, config file and cli arguments
   config.machine_type = StringInquirer.new(machine_is_host? ? 'host' : 'vm')
+  Prepd.verify_workspaces
 
   # Process the command or invoke the console
   if config.command.cli?
