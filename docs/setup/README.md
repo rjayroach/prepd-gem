@@ -1,8 +1,10 @@
-# Setup Host
+## Setup Host
 
-## MacOS
+### MacOS
 
 This assumes a 'clean' MacOS installation of High Sierra or later. To wipe a mac see apple support documents [here](http://support.apple.com/kb/PH13871) and [here](http://support.apple.com/en-us/HT201376)
+
+Additional notes on installing macOS from a USB device [here](https://support.apple.com/en-sg/HT201372) and [here](https://support.apple.com/en-sg/HT201475)
 
 Install command line tools, e.g. git
 
@@ -16,30 +18,53 @@ Install Homebrew
 ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 ```
 
-### Install Ansible
+Install python3 and ansible
 
 ```bash
 brew install python
-pip install ansible
+pip3 install ansible
 ```
 
-## Debian/Ubuntu
-
-### Install Ansible
-```bash
-apt-get install ansible
-```
-
-
-# Configure Host via Ansible
+Install Prepd
 
 ```bash
-git clone https://github.com/rjayroach/ansible-roles
-cd ansible-roles
-./laptop.yml -i 'localhost,' -c local
+brew install rbenv
 ```
 
-# Other Stuff
+### Debian / Ubuntu
+
+Install Ansible and rbenv
+
+```bash
+apt-get install ansible rbenv
+```
+
+## Install and setup prepd
+
+```bash
+rbenv install 2.5.1
+```
+
+Run rbenv doctor, follow the instructions to source rbenv in your shell profile
+
+```bash
+curl -fsSL https://github.com/rbenv/rbenv-installer/raw/master/bin/rbenv-doctor | bash
+```
+
+Open a new terminal window and install prepd
+
+```bash
+gem install prepd
+```
+
+Check out the README.md in ~/.prepd/setup/README.md
+
+```bash
+prepd setup
+```
+
+
+# Miscellaneous Mentions
 
 ## General
 - Copy ssh keypair to ~/.ssh
@@ -65,9 +90,3 @@ Go to System Preferences -> Sharing, enable Remote Login.
 ## Git Projects
 - prepd-project
 - terraform-modules
-
-
-## rbenv
-xcode-select --install
-brew install rbenv
-curl -fsSL https://github.com/rbenv/rbenv-installer/raw/master/bin/rbenv-doctor | bash
