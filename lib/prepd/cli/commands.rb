@@ -45,28 +45,10 @@ module Prepd
     end
 
     #
-    # Clone Ansible roles
+    # Setup a new installation of prepd on a workstation
     #
-
-    # TODO: add OS detection
-    # TODO: Externalize these values to a yaml file
-
-    ANSIBLE_ROLES_PATH = "#{Dir.home}/.ansible/roles".freeze
-    ANSIBLE_ROLES = {'prepd-roles' => 'prepd', 'terraplate' => 'terraplate', 'terraplate-components' => 'terraplate-components' }.freeze
-
-    # TODO: for a mac, install xcode, brew, python, pip, ansible, etc
     def self.setup
-      Dir.mkdir("#{Dir.home}/.prepd/setup")
-      Dir.chdir("#{Dir.home}/.prepd/setup") do
-        FileUtils.cp_r("#{Prepd.files_dir}/setup/.", '.')
-      end
-      FileUtils.mkdir_p(ANSIBLE_ROLES_PATH) unless Dir.exists? ANSIBLE_ROLES_PATH
-      Dir.chdir(ANSIBLE_ROLES_PATH) do
-        ANSIBLE_ROLES.each do |key, value|
-          next if Dir.exists? "#{ANSIBLE_ROLES_PATH}/#{value}"
-          system("git clone #{Prepd.git_log} git@github.com:rjayroach/#{key} #{value}")
-        end
-      end
+      Setup.create
     end
   end
 

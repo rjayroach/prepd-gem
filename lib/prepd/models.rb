@@ -1,4 +1,5 @@
 require 'prepd/models/base'
+require 'prepd/models/setup'
 require 'prepd/models/cluster'
 require 'prepd/models/developer'
 require 'prepd/models/machine'
