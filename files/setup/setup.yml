@@ -3,7 +3,7 @@
 ---
 - hosts: localhost
   vars_files:
-    - vars/setup.yml
+    - vars.yml
   roles:
     - prepd/nginx
 
