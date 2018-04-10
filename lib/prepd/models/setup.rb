@@ -1,16 +1,30 @@
 module Prepd
   class Setup < Base
+    validate :machine_is_host, :directory_cannot_exist
+
     after_create :initialize_setup, :clone_ansible_roles
 
+    def machine_is_host
+      return if Prepd.config.machine_type.host?
+      errors.add(:machine_type, 'Setup can only run on the host machine')
+    end
+
+    def directory_cannot_exist
+      return if Prepd.config.force
+      errors.add(:directory_exists, requested_dir) if Dir.exists?(requested_dir)
+    end
+
     def requested_dir
-      "#{Dir.home}/.prepd/setup"
+      "#{Prepd.config_dir}/setup"
     end
 
     def initialize_setup
-      Dir.mkdir_p(requested_dir)
+      FileUtils.mkdir_p(requested_dir)
       Dir.chdir(requested_dir) do
         FileUtils.cp_r("#{Prepd.files_dir}/setup/.", '.')
       end
+      Prepd.config.working_dir = Prepd.config_dir
+      Workspace.new(name: 'default').create
     end
 
     # TODO: add OS detection

@@ -8,9 +8,9 @@ module Prepd
   Prepd.cli_options = OpenStruct.new(Cli::OptionsParser.new.parse)
 
   # Load the default config, override with config file valuse and finally override with any command line options
+  Prepd.config_dir = Prepd.cli_options.config_dir || "#{Dir.home}/.prepd"
   Prepd.config = OpenStruct.new(base_config.merge(cli_options.to_h))
   config.command = StringInquirer.new(ARGV[0] ? ARGV.shift : 'cli')
-  # config.config_dir = config_dir
 
   config.env = StringInquirer.new(Prepd.cli_options.env || 'production' )
   config.working_dir ||= Dir.pwd

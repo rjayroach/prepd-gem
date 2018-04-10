@@ -48,7 +48,9 @@ module Prepd
     # Setup a new installation of prepd on a workstation
     #
     def self.setup
-      Setup.create
+      obj = Setup.new
+      return obj.errors.full_messages.join("\n") unless obj.valid?
+      obj.create
     end
   end
 

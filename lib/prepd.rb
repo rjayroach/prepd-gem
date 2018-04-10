@@ -16,12 +16,21 @@ module Prepd
   def self.env; @env; end
   def self.env=(env); @env = env; end
 
-  def self.config_dir; "#{Dir.home}/.prepd"; end
+  def self.config_dir; @config_dir end
+
+  def self.config_dir=(dir)
+    @config_dir = dir
+  end
 
   def self.config_file; "#{config_dir}/config.yml"; end
 
   def self.default_config
     { version: 1 }
+  end
+
+  def self.register_workspace(dir)
+    config.workspaces << dir
+    write_config_file
   end
 
   def self.verify_workspaces

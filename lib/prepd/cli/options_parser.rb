@@ -11,6 +11,10 @@ module Prepd::Cli
           options.bump = value
         end
 
+        opts.on( '--cd=CONFIG_DIR', '# Run from the configuration in directory' ) do |value|
+          options.config_dir = value
+        end
+
         opts.on( '--push', '# Push the box to remote S3 bucket' ) do
           options.push = true
         end
