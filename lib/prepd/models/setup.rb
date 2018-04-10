@@ -24,7 +24,7 @@ module Prepd
         FileUtils.cp_r("#{Prepd.files_dir}/setup/.", '.')
       end
       Prepd.config.working_dir = Prepd.config_dir
-      Workspace.new(name: 'default').create
+      Workspace.new(name: 'share').create
     end
 
     # TODO: add OS detection
