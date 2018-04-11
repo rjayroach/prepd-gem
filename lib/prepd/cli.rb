@@ -6,6 +6,10 @@ require 'prepd/cli/commands'
 module Prepd
   # Parse any command line arguments
   Prepd.cli_options = OpenStruct.new(Cli::OptionsParser.new.parse)
+  if Prepd.cli_options.version
+    STDOUT.puts Prepd::VERSION
+    exit 0
+  end
 
   # Load the default config, override with config file valuse and finally override with any command line options
   Prepd.config_dir = Prepd.cli_options.config_dir || "#{Dir.home}/.prepd"

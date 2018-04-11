@@ -15,6 +15,10 @@ module Prepd::Cli
           options.config_dir = value
         end
 
+        opts.on( '--version', '# Display the version and exit' ) do
+          options.version = true
+        end
+
         opts.on( '--push', '# Push the box to remote S3 bucket' ) do
           options.push = true
         end
