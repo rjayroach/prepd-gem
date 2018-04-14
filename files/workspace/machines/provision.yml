@@ -12,6 +12,8 @@
         name: prepd/ruby
     - include_role:
         name: prepd/docker
+    - include_role:
+        name: prepd/terraplate/setup
     - name: Install kubectl
       include_role:
         name: prepd/k8s/kubectl

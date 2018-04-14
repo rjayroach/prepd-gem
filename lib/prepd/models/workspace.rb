@@ -1,11 +1,18 @@
 module Prepd
   class Workspace < Base
-    attr_accessor :name
+    attr_accessor :name, :type
+
+    before_validation :set_defaults
 
     validates :name, presence: true
     validate :directory_cannot_exist
 
     after_create :create_workspace, :initialize_workspace
+
+    def set_defaults
+      self.type ||= 'standard'
+      self.name = 'share' if self.type.eql?('shared')
+    end
 
     def directory_cannot_exist
       return if Prepd.config.force
@@ -25,26 +32,32 @@ module Prepd
 
     def initialize_workspace
       Dir.chdir(requested_dir) do
-        File.open('prepd-workspace.yml', 'w') { |f| f.write("---\nname: #{name}\n") }
-        Prepd.register_workspace(Dir.pwd)
-        FileUtils.cp_r("#{Prepd.files_dir}/workspace/.", '.')
-        Dir.chdir('developer') do
-          File.open('vars.yml', 'w') do |f|
-            f.puts("---\ngit_user:")
-            f.puts("  name: #{`git config --get user.name`.chomp}")
-            f.puts("  email: #{`git config --get user.email`.chomp}")
-          end
-          Prepd.write_password_file('vault-password.txt')
-          FileUtils.touch('vault.yml')
-          system('ansible-vault encrypt vault.yml')
+        initialize_standard_workspace if type.eql?('standard')
+        initialize_shared_workspace if type.eql?('shared')
+      end
+    end
+
+    # Copy only artifiacts necessary for a shared workspace
+    def initialize_shared_workspace
+      %w(projects machines developer/machines).each do |dir|
+        FileUtils.mkdir_p(dir)
+        FileUtils.cp_r("#{Prepd.files_dir}/workspace/#{dir}/.", dir)
+      end
+    end
+
+    def initialize_standard_workspace
+      FileUtils.cp_r("#{Prepd.files_dir}/workspace/.", '.')
+      File.open('prepd-workspace.yml', 'w') { |f| f.write("---\nname: #{name}\n") }
+      Prepd.register_workspace(Dir.pwd)
+      Dir.chdir('developer') do
+        File.open('vars.yml', 'w') do |f|
+          f.puts("---\ngit_user:")
+          f.puts("  name: #{`git config --get user.name`.chomp}")
+          f.puts("  email: #{`git config --get user.email`.chomp}")
         end
-        # NOTE: remove after testing
-        # Dir.chdir('machines') do
-        #   FileUtils.mkdir('packer_cache')
-        #   Dir.chdir('packer_cache') do
-        #     FileUtils.cp('/tmp/50e697ab8edda5b0ac5ba2482c07003d2ff037315c7910af66efd3c28d23ed51.iso', '.')
-        #   end
-        # end
+        Prepd.write_password_file('vault-password.txt')
+        FileUtils.touch('vault.yml')
+        system('ansible-vault encrypt vault.yml')
       end
     end
   end

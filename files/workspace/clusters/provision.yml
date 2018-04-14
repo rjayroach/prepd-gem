@@ -8,7 +8,6 @@
         state: absent
       with_items: [shutdown.sh, yankring_history_v2.txt]
 
-# TODO: move terraform/terragrunt binary installation can be moved to packer.
 - hosts: kubectl:!minikube
   # NOTE: These vars need to be accessible to the project, e.g. utils.yml -e@utils/build.yml needs the cluster_host and local_registry_port in order to tag the image to push it
   # This should go into the machine's prepd.yml config file which also has directory locations. Anything that is a machine wide configuration goes here
@@ -44,15 +43,39 @@
       pause:
         seconds: 30
 
-    - name: Install local registry in local cluster
-      command: 'helm install stable/docker-registry --name local-registry --set service.type=NodePort,service.nodePort={{ prepd_machine.cluster.registry_port }}'
-
     - name: Configure docker to allow push to insecure registry running in local cluster
       include_role:
         name: prepd/docker
         tasks_from: insecure-registry
       vars:
         registry: '{{ prepd_machine.cluster.host }}:{{ prepd_machine.cluster.registry_port }}'
+
+    - name: Install local registry in cluster
+      command: 'helm install stable/docker-registry --name local-registry --set service.type=NodePort,service.nodePort={{ prepd_machine.cluster.registry_port }}'
+
+    - name: Install Prometheus
+      command: 'helm install stable/prometheus --name prometheus --namespace prometheus --set rbac.create=false'
+      when: false
+
+    - name: Install Grafana
+      command: 'helm install stable/grafana --name grafana --set server.adminPassword=test,server.service.type=NodePort,server.service.nodePort={{ prepd_machine.cluster.grafana_port }}'
+      when: false
+
+    # TODO: Change this to get_url to get the JSON dashbaord
+    # NOTE: The dashboard tested here is too old in fact
+    - name: Import Grafana dashboard foo
+      grafana_dashboard:
+        grafana_url: 'http://{{ prepd_machine.cluster.host }}:{{ prepd_machine.cluster.grafana_port }}'
+        # grafana_api_key: XXXXXXXXXXXX
+        grafana_user: admin
+        grafana_password: test
+        state: present
+        message: Updated by ansible
+        overwrite: yes
+        slug: happy
+        path: /home/vagrant/data/kubernetes-pod-monitoring_rev1.json
+      when: false
+
 
 - hosts: minikube
   tasks:

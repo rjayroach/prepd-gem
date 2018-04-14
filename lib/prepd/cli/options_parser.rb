@@ -11,20 +11,17 @@ module Prepd::Cli
           options.bump = value
         end
 
-        opts.on( '--cd=CONFIG_DIR', '# Run from the configuration in directory' ) do |value|
+        opts.on( '--cd=CONFIG_DIR', "# Run from specified configuration directory. default is #{Dir.home}/.prepd" ) do |value|
           options.config_dir = value
         end
 
         opts.on( '--version', '# Display the version and exit' ) do
-          options.version = true
+          STDOUT.puts Prepd::VERSION
+          exit
         end
 
         opts.on( '--push', '# Push the box to remote S3 bucket' ) do
           options.push = true
-        end
-
-        opts.on( '--dev', '# Setup the application with development repositories' ) do |value|
-          options.env = 'development'
         end
 
         opts.on( '--dir=DIR', '# Set the working directory' ) do |value|

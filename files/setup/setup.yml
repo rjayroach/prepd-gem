@@ -11,6 +11,7 @@
     - prepd/yadr
     - prepd/vagrant
     - prepd/packer
+    - prepd/prepd-tools
     - prepd/extras
 
 # TODO: put the extra role still has some legacy code; refactor that when installing on linux laptop
