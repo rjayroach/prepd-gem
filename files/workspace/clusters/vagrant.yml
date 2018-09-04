@@ -4,7 +4,7 @@
 settings:
   workspace: <%= Pathname.new(Dir.pwd).parent.parent %>
   boxes_dir: <%= Pathname.new(Dir.pwd).parent.parent %>/machines/boxes
-  # boxes_dir: <%= Dir.home %>/.prepd/share/packer/debian/stretch/boxes
+  # boxes_dir: <%= Dir.home %>/.prepd/share/machines/boxes
   # boxes_dir: https://s3-ap-southeast-1.amazonaws.com/c2p4-storage/boxes
   name: <%= Dir.pwd.split('/').last %>
   projects_name: <%= Dir.pwd.split('/').last %>
@@ -12,7 +12,9 @@ settings:
 boxes:
   development:
     box: <%= workspace['name'] %>/debian-stretch-amd64-development
+    # box: share/debian-stretch-amd64-development
     box_url: <%= settings['boxes_dir'] %>/debian-stretch-amd64-development.json
   minikube:
     box: <%= workspace['name'] %>/debian-stretch-amd64-minikube
+    # box: share/debian-stretch-amd64-minikube
     box_url: <%= settings['boxes_dir'] %>/debian-stretch-amd64-minikube.json

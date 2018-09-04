@@ -25,19 +25,19 @@ Vagrant.configure(2) do |config|
     v.customize ['modifyvm', :id, '--nictype1', 'virtio']
     # v.customize ['modifyvm', :id, '--nic1', 'hostonly', '--nic2', 'nat']
 
-		host = RbConfig::CONFIG["host_os"]
-		if host =~ /darwin/ # OS X
-			# sysctl returns bytes, convert to MB
+    host = RbConfig::CONFIG["host_os"]
+    if host =~ /darwin/ # OS X
+      # sysctl returns bytes, convert to MB
       # allocate 1/8 (12.5%) of available physical memory to the VM
-			v.memory = `sysctl -n hw.memsize`.to_i / 1024 / 1024 / 8
-			v.cpus = 1 # `sysctl -n hw.physicalcpu`.to_i
-		elsif host =~ /linux/ # Linux
+      v.memory = `sysctl -n hw.memsize`.to_i / 1024 / 1024 / 8
+      v.cpus = 1 # `sysctl -n hw.physicalcpu`.to_i
+    elsif host =~ /linux/ # Linux
       # TODO: Linux host not tested
-			# meminfo returns kilobytes, convert to MB
-			v.memory = `grep 'MemTotal' /proc/meminfo | sed -e 's/MemTotal://' -e 's/ kB//'`.to_i / 1024 / 8
-			v.cpus = `nproc`.to_i
-		end
-  end
+      # meminfo returns kilobytes, convert to MB
+      # v.memory = `grep 'MemTotal' /proc/meminfo | sed -e 's/MemTotal://' -e 's/ kB//'`.to_i / 1024 / 8
+      v.cpus = `nproc`.to_i
+      end
+    end
 
   prepd_config.machines.each do |key|
     machine = Prepd::Vagrant::Machine.new(key)
@@ -52,8 +52,8 @@ Vagrant.configure(2) do |config|
       node.vm.box_url = machine.vm_box_url
 
       # NFS directory mounts
-			# NOTE: NFS exports cannot be nested; If there is an error, make sure that the attempted mounts here
-			# are not subdirectories of an already NFS mounted directory in the directory tree
+      # NOTE: NFS exports cannot be nested; If there is an error, make sure that the attempted mounts here
+      # are not subdirectories of an already NFS mounted directory in the directory tree
       node.vm.synced_folder '.', '/vagrant', disabled: true
       machine.mounts.each do |key, mount_path|
         FileUtils.mkdir_p(mount_path['host'])

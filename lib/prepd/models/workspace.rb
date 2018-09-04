@@ -39,6 +39,7 @@ module Prepd
 
     # Copy only artifiacts necessary for a shared workspace
     def initialize_shared_workspace
+      File.open('prepd-workspace.yml', 'w') { |f| f.write("---\nname: #{name}\n") }
       %w(projects machines developer/machines).each do |dir|
         FileUtils.mkdir_p(dir)
         FileUtils.cp_r("#{Prepd.files_dir}/workspace/#{dir}/.", dir)
@@ -47,7 +48,6 @@ module Prepd
 
     def initialize_standard_workspace
       FileUtils.cp_r("#{Prepd.files_dir}/workspace/.", '.')
-      File.open('prepd-workspace.yml', 'w') { |f| f.write("---\nname: #{name}\n") }
       Prepd.register_workspace(Dir.pwd)
       Dir.chdir('developer') do
         File.open('vars.yml', 'w') do |f|
